@@ -10,3 +10,6 @@
 #Database
 /postgres-data/
 /drizzle-migrations/
+
+#Extra
+/extra/
