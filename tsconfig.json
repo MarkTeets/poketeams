@@ -3,6 +3,7 @@
     "**/*",
     "**/.server/**/*",
     "**/.client/**/*",
+    "database/**/*",
     ".react-router/types/**/*"
   ],
   "compilerOptions": {

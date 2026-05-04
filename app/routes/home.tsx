@@ -1,13 +1,31 @@
 import type { Route } from "./+types/home";
-import { Welcome } from "../welcome/welcome";
+import { db } from "../../database/db";
+import { useLoaderData } from "react-router";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
+    { title: "PokeTeams" },
+    { name: "PokeTeams", content: "Gotta catch 'em all!" },
   ];
 }
 
+export async function loader({}: Route.LoaderArgs) {
+  const results = await db.query.usersTable.findMany({
+    columns: {
+      userId: true,
+      username: true,
+    },
+  });
+
+  const username = results[0].username
+  if (typeof username !== "string") return null;
+    
+  return username;
+}
+
 export default function Home() {
-  return <Welcome />;
+  const loaderData = useLoaderData<typeof loader>();
+  return <div>
+    {loaderData ? loaderData : "connection failed"}
+  </div>
 }

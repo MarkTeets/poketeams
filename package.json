@@ -1,29 +1,38 @@
 {
-  "name": "poketeams2",
+  "name": "poketeams",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
+    "db:generate": "dotenv -- drizzle-kit generate",
+    "db:migrate": "dotenv -- drizzle-kit migrate",
+    "db:seed": "dotenv -- tsx database/seed.ts",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
-    "@react-router/node": "7.14.0",
-    "@react-router/serve": "7.14.0",
-    "isbot": "^5.1.36",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-router": "7.14.0"
+    "@react-router/node": "7.14.2",
+    "@react-router/serve": "7.14.2",
+    "drizzle-orm": "^0.45.2",
+    "isbot": "^5.1.39",
+    "pg": "^8.20.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-router": "7.14.2"
   },
   "devDependencies": {
-    "@react-router/dev": "7.14.0",
-    "@tailwindcss/vite": "^4.2.2",
-    "@types/node": "^22",
+    "@react-router/dev": "7.14.2",
+    "@tailwindcss/vite": "^4.2.4",
+    "@types/node": "^25",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "tailwindcss": "^4.2.2",
-    "typescript": "^5.9.3",
-    "vite": "^8.0.3"
+    "dotenv-cli": "^11.0.0",
+    "drizzle-kit": "^0.31.10",
+    "tailwindcss": "^4.2.4",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10"
   }
 }
