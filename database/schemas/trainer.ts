@@ -1,7 +1,7 @@
 import { boolean, integer, pgSchema, varchar } from "drizzle-orm/pg-core";
 
+import { timestamps } from "../utils/columnHelpers";
 import { usersTable } from "./app_user";
-import { timestamps } from "../columnHelpers";
 
 const trainerSchema = pgSchema("trainer");
 

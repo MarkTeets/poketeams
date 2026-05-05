@@ -1,16 +1,17 @@
 import { db } from "./db";
 import { usersTable } from "./schemas/app_user";
 import {
-  trainersTable,
-  pokemonTable,
   pcBoxesTable,
+  pokemonTable,
   pokemonToPcBoxTable,
-  teamsTable,
   pokemonToTeamTable,
+  teamsTable,
+  trainersTable,
 } from "./schemas/trainer";
 
 async function main() {
   // Delete in reverse FK order so constraints don't fire
+  /* eslint-disable drizzle/enforce-delete-with-where */
   await db.delete(pokemonToTeamTable);
   await db.delete(pokemonToPcBoxTable);
   await db.delete(teamsTable);
@@ -18,6 +19,7 @@ async function main() {
   await db.delete(pokemonTable);
   await db.delete(trainersTable);
   await db.delete(usersTable);
+  /* eslint-enable drizzle/enforce-delete-with-where */
 
   // ---- usersTable ----
   const insertedUsers = await db
