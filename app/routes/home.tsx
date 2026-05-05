@@ -1,6 +1,7 @@
-import type { Route } from "./+types/home";
-import { db } from "../../database/db";
 import { useLoaderData } from "react-router";
+
+import { getAllUsers, getUserByEmail } from "../../database/models/app_user";
+import type { Route } from "./+types/home";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -10,22 +11,20 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export async function loader({}: Route.LoaderArgs) {
-  const results = await db.query.usersTable.findMany({
-    columns: {
-      userId: true,
-      username: true,
-    },
-  });
-
-  const username = results[0].username
-  if (typeof username !== "string") return null;
-    
-  return username;
+  // const results = await getAllUsers();
+  const results = await getUserByEmail("mark@email.com")
+  console.log(results);
+  return results;
 }
 
 export default function Home() {
   const loaderData = useLoaderData<typeof loader>();
-  return <div>
-    {loaderData ? loaderData : "connection failed"}
-  </div>
+  const username = loaderData.users?.[0]?.username;
+  const error = loaderData.error
+  return (
+    <>
+    <div>{username ? username : "No username"}</div>
+    <div>{error ? error : "No error"}</div>
+    </>
+  )
 }
