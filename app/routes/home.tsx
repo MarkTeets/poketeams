@@ -1,6 +1,6 @@
 import { useLoaderData } from "react-router";
 
-import { getUserByEmail } from "../models/app_user";
+import { getUserByEmail } from "../models/app_user.server";
 export function meta() {
   return [
     { title: "PokeTeams" },

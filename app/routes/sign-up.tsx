@@ -1,7 +1,7 @@
 import { data, Form, useActionData } from "react-router";
 import z from "zod";
 
-import { createUser } from "~/models/app_user";
+import { createUser } from "~/models/app_user.server";
 import { validateForm } from "~/utils/form-validation";
 import { sendResponseData } from "~/utils/response-package";
 
