@@ -1,19 +1,16 @@
 import { useLoaderData } from "react-router";
 
 import { getUserByEmail } from "../models/app_user.server";
-export function meta() {
-  return [
-    { title: "PokeTeams" },
-    { name: "PokeTeams", content: "Gotta catch 'em all!" },
-  ];
-}
 
 export async function loader() {
-  const result = await getUserByEmail("mark@email.com");
+  const result = await getUserByEmail("mar@email.com");
   if (!result.ok) {
     return { username: undefined, dbError: result.message };
   }
-  return { username: result.data[0]?.username, dbError: undefined };
+  if (!result.data) {
+    return { username: undefined, dbError: "user not found" }
+  }
+  return { username: result.data.username, dbError: undefined };
 }
 
 export default function Home() {

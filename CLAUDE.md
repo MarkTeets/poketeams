@@ -68,7 +68,6 @@ Actions interpret the model result and construct what the component needs. Each 
 ```ts
 type SignUpErrors = {
   email?: string;
-  password?: string;
   form?: string;
 };
 ```
@@ -79,8 +78,8 @@ Route actions use `validateForm()` from `app/utils/form-validation.ts`. The call
 ```ts
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
-  return validateForm(formData, zodSchema, async ({ email, password }) => {
-    const result = await someModelFunction(email, password);
+  return validateForm(formData, zodSchema, async ({ email }) => {
+    const result = await someModelFunction(email);
     if (!result.ok) {
       const errors: RouteErrors = result.constraint === "some_constraint"
         ? { field: "Specific message" }

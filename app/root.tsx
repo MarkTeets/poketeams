@@ -1,15 +1,28 @@
 import "./app.css";
 
 import {
+  data,
   isRouteErrorResponse,
+  Link,
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
+  useRouteError,
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import AppNavLink from "./components/app-nav-link";
+import { getCurrentUser } from "./utils/auth.server";
+
+export function meta() {
+  return [
+    { title: "Poketeams" },
+    { name: "description", content: "Welcome to Poketeams!" },
+  ];
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -23,6 +36,13 @@ export const links: Route.LinksFunction = () => [
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
 ];
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const user = await getCurrentUser(request);
+  console.log("root user:");
+  console.log(user);
+  return data({ isLoggedIn: user !== null });
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -43,34 +63,72 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  const loaderData = useLoaderData<typeof loader>();
+  return (
+    <>
+      <nav
+        className="
+          flex justify-between text-white
+          md:w-16 md:flex-col
+        "
+      >
+        <ul className="
+          flex
+          md:flex-col
+        ">
+          <AppNavLink to="/">Home</AppNavLink>
+          <AppNavLink to="/app">App</AppNavLink>
+        </ul>
+        <ul>
+          {loaderData.isLoggedIn ? (
+            <AppNavLink to="/logout">Logout</AppNavLink>
+          ) : (
+            <AppNavLink to="/login">Login</AppNavLink>
+          )}
+        </ul>
+      </nav>
+      <div
+        className="
+          w-full p-4
+          md:w-[calc(100%-4rem)]
+        "
+      >
+        <Outlet />
+      </div>
+    </>
+  );
 }
-
-export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
-  let stack: string | undefined;
-
+export function ErrorBoundary() {
+  const error = useRouteError();
+  console.log(error)
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
-    details =
-      error.status === 404
-        ? "The requested page could not be found."
-        : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message;
-    stack = error.stack;
+    return (
+      <div className="p-4">
+        <h1 className="text-2xl pb-3">
+          {error.status} - {error.statusText}
+        </h1>
+        <p>You're seeing this page because an error occurred.</p>
+        <p className="my-4 font-bold">{error.data?.message || error.data?.errors?.error}</p>
+        <Link to="/" className="text-primary">
+          Take me home
+        </Link>
+      </div>
+    );
+  }
+
+  let errorMessage = "Unknown error";
+  if (error instanceof Error) {
+    errorMessage = error.message;
   }
 
   return (
-    <main className="container mx-auto p-4 pt-16">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full overflow-x-auto p-4">
-          <code>{stack}</code>
-        </pre>
-      )}
-    </main>
+    <div className="p-4">
+      <h1 className="text-2xl pb-3">Whoops!</h1>
+      <p>You're seeing this page because an unexpected error occurred.</p>
+      <p className="my-4 font-bold">{errorMessage}</p>
+      <Link to="/" className="text-primary">
+        Take me home
+      </Link>
+    </div>
   );
 }

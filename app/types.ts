@@ -4,7 +4,7 @@ export type FormFields = {
   [key: string]: FormDataEntryValue | FormDataEntryValue[];
 };
 
-export type ModelOk<T> = { ok: true; data: T };
+export type ModelOk<T> = { ok: true; data: T | null };
 
 export type ModelErr = {
   ok: false;

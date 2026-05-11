@@ -25,10 +25,11 @@ function objectify(formData: FormData) {
   return formFields;
 }
 
-export function validateForm<T, S>(
+export function validateForm<T, S, E>(
   formData: FormData,
   zodSchema: z.Schema<T>,
   successFn: (data: T) => S,
+  errorFn?: (errors: FieldErrors) => E,
 ) {
   const fields = objectify(formData);
   const result = zodSchema.safeParse(fields);
@@ -42,6 +43,7 @@ export function validateForm<T, S>(
     });
     // console.log('failed; errors:');
     // console.log(errors);
+    if (errorFn) return errorFn(errors);
     return sendResponseError(errors);
   }
   // console.log('success; result:')

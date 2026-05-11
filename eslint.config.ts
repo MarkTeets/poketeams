@@ -32,6 +32,7 @@ export default defineConfig([
   {
     rules: {
       "@typescript-eslint/no-unnecessary-type-assertion": "warn",
+      "@typescript-eslint/only-throw-error": "off",
     },
   },
   pluginReact.configs.flat.recommended,

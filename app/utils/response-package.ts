@@ -1,6 +1,19 @@
-import { data } from "react-router";
+import { data as RRdata } from "react-router";
 
 import type { FieldErrors } from "~/types";
+
+export type ActionResponsePackage<T> = {
+  success: boolean;
+  data: T;
+  errors: FieldErrors | undefined;
+};
+
+export const sendData = <T>(
+  data: ActionResponsePackage<T>,
+  init?: ResponseInit | number,
+) => {
+  return RRdata<ActionResponsePackage<T>>(data, init);
+};
 
 export const responseDataPackage = <T>(info: T) => {
   return {
@@ -19,9 +32,9 @@ export const responseErrorPackage = (errors: FieldErrors) => {
 };
 
 export const sendResponseData = <T>(info: T, status = 200) => {
-  return data(responseDataPackage(info), { status });
+  return sendData(responseDataPackage(info), { status });
 };
 
 export const sendResponseError = (errors: FieldErrors, status = 400) => {
-  return data(responseErrorPackage(errors), { status });
+  return sendData(responseErrorPackage(errors), { status });
 };
