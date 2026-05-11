@@ -10,7 +10,6 @@ export const usersTable = appUserSchema.table(
     userId: integer().primaryKey().generatedAlwaysAsIdentity(),
     username: varchar({ length: 255 }).notNull(),
     email: varchar({ length: 255 }).notNull(),
-    password: varchar({ length: 255 }).notNull(),
     ...timestamps,
   },
   (table) => [

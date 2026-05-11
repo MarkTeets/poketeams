@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import type { ModelResult } from "~/types";
 
@@ -29,7 +29,7 @@ export const getAllUsers = async (): Promise<ModelResult<UserRecord[]>> => {
   }
 };
 
-export const getUserByEmail = async (email: string): Promise<ModelResult<UserRecord[]>> => {
+export const getUserByEmail = async (email: string): Promise<ModelResult<UserRecord>> => {
   try {
     const result = await db
       .select({
@@ -39,7 +39,9 @@ export const getUserByEmail = async (email: string): Promise<ModelResult<UserRec
       })
       .from(usersTable)
       .where(sql`lower(${usersTable.email}) = ${email.toLowerCase()}`);
-    return { ok: true, data: result };
+    
+    const user = result[0] ?? null;
+    return { ok: true, data: user };
   } catch (error) {
     const { message, constraint } = getDbErrorMessage(error);
     console.error("Database operation failed:", { message, constraint, originalError: error });
@@ -47,16 +49,41 @@ export const getUserByEmail = async (email: string): Promise<ModelResult<UserRec
   }
 };
 
-export const createUser = async (email: string, password: string): Promise<ModelResult<UserRecord>> => {
+
+export const getUserById = async (userId: number): Promise<ModelResult<UserRecord>> => {
+  if (!Number.isInteger(userId) || userId < 1) {
+    return { ok: false, message: "userId must be an integer greater than 0", constraint: null };
+  }
   try {
-    const [user] = await db
+    const result = await db
+      .select({
+        userId: usersTable.userId,
+        username: usersTable.username,
+        email: usersTable.email,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.userId, userId));
+    const user = result[0] ?? null;
+    return { ok: true, data: user };
+  } catch (error) {
+    const { message, constraint } = getDbErrorMessage(error);
+    console.error("Database operation failed:", { message, constraint, originalError: error });
+    return { ok: false, message, constraint };
+  }
+};
+
+
+export const createUser = async (email: string, username?: string): Promise<ModelResult<UserRecord>> => {
+  try {
+    const result = await db
       .insert(usersTable)
-      .values({ email, password, username: email.charAt(0) })
+      .values({ email, username: username ? username : email })
       .returning({
         userId: usersTable.userId,
         username: usersTable.username,
         email: usersTable.email,
       });
+    const user = result[0] ?? null;
     return { ok: true, data: user };
   } catch (error) {
     const { message, constraint } = getDbErrorMessage(error);
