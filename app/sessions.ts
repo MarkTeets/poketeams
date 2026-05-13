@@ -1,8 +1,16 @@
 import { createCookieSessionStorage } from "react-router";
 
-import { sessionCookie } from "./cookies";
+import { authCookie, sessionCookie } from "./cookies";
 
 export const { getSession, commitSession, destroySession } =
-  createCookieSessionStorage<{ userId: number, nonce: string }, never>({
+  createCookieSessionStorage<{ userId: number }, never>({
     cookie: sessionCookie,
   });
+
+export const {
+  getSession: getAuthSession,
+  commitSession: commitAuthSession,
+  destroySession: destroyAuthSession,
+} = createCookieSessionStorage<{ nonce: string; pendingEmail: string }, never>({
+  cookie: authCookie,
+});

@@ -8,11 +8,14 @@ export async function loader({ request }: Route.LoaderArgs) {
   const cookieHeader = request.headers.get("cookie");
   const session = await getSession(cookieHeader);
 
-  return data({"success": true}, {
-    headers: {
-      "Set-Cookie": await destroySession(session)
-    }
-  })
+  return data(
+    { success: true },
+    {
+      headers: {
+        "Set-Cookie": await destroySession(session),
+      },
+    },
+  );
 }
 
 export default function Logout() {
@@ -21,10 +24,8 @@ export default function Logout() {
       <div className="mt-24">
         <h1 className="text-2xl">You&apos;re good to go!</h1>
         <p className="py-8">Logout successful</p>
-        <a href="/">
-          Take me home
-        </a>
+        <a href="/">Take me home</a>
       </div>
     </div>
-  )
+  );
 }

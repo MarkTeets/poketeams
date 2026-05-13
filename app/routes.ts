@@ -6,4 +6,5 @@ export default [
   route("login", "routes/login.tsx"),
   route("logout", "routes/logout.tsx"),
   route("validate-magic-link", "routes/validate-magic-link.tsx"),
+  route("sign-up/complete", "routes/sign-up-complete.tsx"),
 ] satisfies RouteConfig;
