@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { NavLink,useNavigation, useResolvedPath } from "react-router";
+import { NavLink, useNavigation, useResolvedPath } from "react-router";
 
 type AppNavLinkProps = {
   children: React.ReactNode;

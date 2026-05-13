@@ -68,15 +68,15 @@ export default function App() {
     <>
       <nav
         className="
-        flex justify-between text-white
-        md:w-16 md:flex-col
-      "
+          flex justify-between text-white
+          md:w-16 md:flex-col
+        "
       >
         <ul
           className="
-          flex
-          md:flex-col
-        "
+            flex
+            md:flex-col
+          "
         >
           <AppNavLink to="/">Home</AppNavLink>
           <AppNavLink to="/app">App</AppNavLink>
