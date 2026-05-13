@@ -4,7 +4,7 @@ import { createReadableStreamFromReadable } from "@react-router/node";
 import { isbot } from "isbot";
 import type { RenderToPipeableStreamOptions } from "react-dom/server";
 import { renderToPipeableStream } from "react-dom/server";
-import type { EntryContext,RouterContextProvider } from "react-router";
+import type { EntryContext, RouterContextProvider } from "react-router";
 import { ServerRouter } from "react-router";
 
 export const streamTimeout = 5_000;
@@ -16,7 +16,7 @@ export default function handleRequest(
   routerContext: EntryContext,
   //loadContext: AppLoadContext,
   // If you have middleware enabled:
-  loadContext: RouterContextProvider
+  loadContext: RouterContextProvider, // eslint-disable-line @typescript-eslint/no-unused-vars
 ) {
   // https://httpwg.org/specs/rfc9110.html#HEAD
   if (request.method.toUpperCase() === "HEAD") {
@@ -71,7 +71,7 @@ export default function handleRequest(
           );
         },
         onShellError(error: unknown) {
-          reject(error);
+          reject(error); // eslint-disable-line @typescript-eslint/prefer-promise-reject-errors
         },
         onError(error: unknown) {
           responseStatusCode = 500;

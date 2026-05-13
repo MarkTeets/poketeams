@@ -25,8 +25,8 @@ async function main() {
   const insertedUsers = await db
     .insert(usersTable)
     .values([
-      { username: "Mark", email: "mark@email.com"},
-      { username: "Jeff", email: "jeff@email.com"},
+      { username: "Mark", email: "mark@email.com" },
+      { username: "Jeff", email: "jeff@email.com" },
     ])
     .returning();
 
@@ -221,7 +221,8 @@ async function main() {
     .returning();
 
   const [legendsBox, favoritesBox, blueBox] = insertedBoxes;
-  if (!legendsBox || !favoritesBox || !blueBox) throw new Error("Failed to insert PC boxes");
+  if (!legendsBox || !favoritesBox || !blueBox)
+    throw new Error("Failed to insert PC boxes");
 
   // ---- pokemon_to_pc_box ----
   await db.insert(pokemonToPcBoxTable).values([

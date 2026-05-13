@@ -68,14 +68,16 @@ export default function App() {
     <>
       <nav
         className="
-          flex justify-between text-white
-          md:w-16 md:flex-col
-        "
+        flex justify-between text-white
+        md:w-16 md:flex-col
+      "
       >
-        <ul className="
+        <ul
+          className="
           flex
           md:flex-col
-        ">
+        "
+        >
           <AppNavLink to="/">Home</AppNavLink>
           <AppNavLink to="/app">App</AppNavLink>
         </ul>
@@ -100,18 +102,19 @@ export default function App() {
 }
 export function ErrorBoundary() {
   const error = useRouteError();
-  console.log(error)
+  console.log(error);
   if (isRouteErrorResponse(error)) {
     return (
       <div className="p-4">
-        <h1 className="text-2xl pb-3">
+        <h1 className="pb-3 text-2xl">
           {error.status} - {error.statusText}
         </h1>
-        <p>You're seeing this page because an error occurred.</p>
-        <p className="my-4 font-bold">{error.data?.message || error.data?.errors?.error}</p>
-        <Link to="/" className="text-primary">
-          Take me home
-        </Link>
+        <p>You&apos;re seeing this page because an error occurred.</p>
+        <p className="my-4 font-bold">
+          {/* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access */}
+          {error.data?.message || error.data?.errors?.message}
+        </p>
+        <Link to="/">Take me home</Link>
       </div>
     );
   }
@@ -123,12 +126,10 @@ export function ErrorBoundary() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl pb-3">Whoops!</h1>
-      <p>You're seeing this page because an unexpected error occurred.</p>
+      <h1 className="pb-3 text-2xl">Whoops!</h1>
+      <p>You&apos;re seeing this page because an unexpected error occurred.</p>
       <p className="my-4 font-bold">{errorMessage}</p>
-      <Link to="/" className="text-primary">
-        Take me home
-      </Link>
+      <Link to="/">Take me home</Link>
     </div>
   );
 }
