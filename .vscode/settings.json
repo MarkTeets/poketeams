@@ -3,6 +3,7 @@
     "cryptr",
     "envrc",
     "isbot",
+    "pino",
     "Pipeable",
     "poketeam",
     "poketeams",
