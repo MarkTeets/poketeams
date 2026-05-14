@@ -1,6 +1,10 @@
 type Entry = { count: number; resetAt: number };
 const store = new Map<string, Entry>();
 
+export function resetRateLimits() {
+  store.clear();
+}
+
 function allow(key: string, limit: number, windowMs: number): boolean {
   const now = Date.now();
   const entry = store.get(key);

@@ -13,12 +13,23 @@ npx eslint .         # Lint (no lint script in package.json — run eslint direc
 npx eslint --fix .   # Auto-fix (import sorting, etc.)
 
 # Database (requires DATABASE_URL env var)
+npm run db:up        # Start dev Postgres on port 5433 (docker-compose.yml)
+npm run db:down      # Stop dev Postgres
 npm run db:generate  # Generate migration from schema changes
-npm run db:migrate   # Apply pending migrations
+npm run db:migrate   # Apply pending migrations to dev DB
 npm run db:seed      # Seed the database
 
-# Local Postgres via Docker
-docker compose up -d  # Start Postgres on port 5433
+# Test databases (separate Postgres instance on port 5434)
+npm run test-db:up     # Start the test Postgres (creates poketeams_test_unit + poketeams_test_e2e)
+npm run test-db:down   # Stop it
+npm run test-db:reset  # Down + up (tmpfs storage, so this wipes everything)
+
+# Tests (each `npm run test:*` auto-runs its own pretest migration step)
+npm run test            # test:unit then test:e2e
+npm run test:unit       # vitest run, against poketeams_test_unit
+npm run test:unit:watch # vitest watch mode
+npm run test:e2e        # playwright test, against poketeams_test_e2e
+npm run test:e2e:ui     # playwright --ui
 ```
 
 Env vars are loaded from `.env` via `dotenv-cli` for database scripts. The dev server reads `.env` automatically via Vite.
@@ -34,10 +45,11 @@ The app fails fast at module load (`logger.fatal` + `throw`) if any of these are
 - `ORIGIN` — base URL used when constructing magic link URLs
 - `MAILGUN_API_KEY`, `MAILGUN_DOMAIN` — Mailgun credentials ([app/utils/emails.server.ts](app/utils/emails.server.ts)); only used when `NODE_ENV === "production"` — in dev, the magic link is logged instead of emailed
 - `LOG_LEVEL` (optional) — overrides the default pino level of `info`
+- `TEST_MODE` (optional) — when set to `"true"`, mounts the `/__test/*` helper routes and enables the in-memory test inbox + `makeExpiredMagicLink`. Set in [.env.test.unit](.env.test.unit) and [.env.test.e2e](.env.test.e2e); must never be `"true"` in production.
 
 ## Architecture
 
-**Stack:** React Router v7 (SSR, framework mode) · Drizzle ORM · PostgreSQL · TailwindCSS v4 · Zod · TypeScript · pino · Mailgun · Cryptr
+**Stack:** React Router v7 (SSR, framework mode) · Drizzle ORM · PostgreSQL · TailwindCSS v4 · Zod · TypeScript · pino · Mailgun · Cryptr · Vitest · Playwright
 
 ### Layer separation
 
@@ -51,13 +63,15 @@ database/        ← schema definitions and the db client
 app/
   components/             ← shared React components
   models/                 ← data-access functions (queries/mutations), one file per domain
+    __tests__/            ← vitest model-layer tests (run against the unit test DB)
   routes/                 ← React Router route files (loader/action + default component)
+    __test-routes__/      ← TEST_MODE-gated helper routes mounted under /__test/*
   utils/                  ← shared utilities (see below)
   cookies.ts              ← createCookie config for the two cookie stores
   sessions.ts             ← createCookieSessionStorage for auth + post-login sessions
-  magic-links.server.tsx  ← generate / validate / email signed magic links
+  magic-links.server.tsx  ← generate / validate / email signed magic links (+ makeExpiredMagicLink test helper)
   root.tsx                ← root layout, nav, ErrorBoundary
-  routes.ts               ← route table
+  routes.ts               ← route table (test routes appended when TEST_MODE === "true")
   types.ts                ← shared TS types (FieldErrors, FormFields, ModelResult)
 
 app/utils/
@@ -66,8 +80,17 @@ app/utils/
   emails.server.ts        ← Mailgun client + sendEmail
   form-validation.ts      ← validateForm() — Zod + FormData glue
   logger.server.ts        ← pino singleton
-  rate-limit.server.ts    ← in-memory IP + email rate limiters
+  rate-limit.server.ts    ← in-memory IP + email rate limiters (+ resetRateLimits test helper)
   response-package.ts     ← sendData / sendResponseData / sendResponseError
+  test-db.server.ts       ← truncateAllTables() — wipes app_user + trainer schemas between tests
+  test-inbox.server.ts    ← in-memory "inbox" holding the last magic link issued (test-only)
+
+e2e/                       ← Playwright specs (auth.spec.ts)
+docker-compose.test.yml    ← Postgres on :5434 with tmpfs storage
+docker-init/               ← creates poketeams_test_unit + poketeams_test_e2e on container init
+playwright.config.ts       ← Playwright config (boots react-router dev on :5174 with .env.test.e2e)
+vitest.config.ts           ← Vitest config (node env, fileParallelism: false)
+vitest.setup.ts            ← runs truncateAllTables() in a beforeEach hook
 ```
 
 ### Database schemas (Postgres namespaces)
@@ -89,8 +112,12 @@ Auth uses two separate cookie-backed sessions, intentionally split so the pre-lo
 Both cookies are `httpOnly`, `secure`, `sameSite: strict`, with their own secrets ([app/cookies.ts](app/cookies.ts)). Storage factories live in [app/sessions.ts](app/sessions.ts):
 
 ```ts
-import { getAuthSession, commitAuthSession, destroyAuthSession } from "~/sessions"; // pre-login
-import { getSession, commitSession, destroySession } from "~/sessions";             // post-login
+import {
+  getAuthSession,
+  commitAuthSession,
+  destroyAuthSession,
+} from "~/sessions"; // pre-login
+import { getSession, commitSession, destroySession } from "~/sessions"; // post-login
 ```
 
 The magic link flow:
@@ -113,8 +140,8 @@ Two distinct layers with different shapes:
 **Model → Action:** `ModelResult<T>` from [app/types.ts](app/types.ts)
 
 ```ts
-type ModelOk<T>  = { ok: true; data: T | null };
-type ModelErr    = { ok: false; message: string; constraint: string | null };
+type ModelOk<T> = { ok: true; data: T | null };
+type ModelErr = { ok: false; message: string; constraint: string | null };
 type ModelResult<T> = ModelOk<T> | ModelErr;
 ```
 
@@ -155,11 +182,18 @@ export async function action({ request }: Route.ActionArgs) {
           result.constraint === "some_constraint"
             ? { field: "Specific message" }
             : { message: result.message };
-        return sendData({ success: false, data: { email }, errors }, { status: 400 });
+        return sendData(
+          { success: false, data: { email }, errors },
+          { status: 400 },
+        );
       }
       return sendResponseData(result.data);
     },
-    (errors) => sendData({ success: false, data: { email: formData.get("email") }, errors }, { status: 400 }),
+    (errors) =>
+      sendData(
+        { success: false, data: { email: formData.get("email") }, errors },
+        { status: 400 },
+      ),
   );
 }
 ```
@@ -172,7 +206,29 @@ Field names ending in `[]` are treated as multi-value arrays by `objectify()`.
 
 ### Rate limiting
 
-[app/utils/rate-limit.server.ts](app/utils/rate-limit.server.ts) is a simple in-memory fixed-window limiter (a single `Map<string, { count, resetAt }>`). It exposes `allowByIp` (5 per 10 min), `allowByEmail` (5 per 60s), and `getClientIp` (reads `x-forwarded-for`). Because state lives in memory, it's per-process — fine for single-instance deploys but not horizontally scalable. `getClientIp` requires being behind a trusted proxy to avoid spoofing.
+[app/utils/rate-limit.server.ts](app/utils/rate-limit.server.ts) is a simple in-memory fixed-window limiter (a single `Map<string, { count, resetAt }>`). It exposes `allowByIp` (5 per 10 min), `allowByEmail` (5 per 60s), `getClientIp` (reads `x-forwarded-for`), and `resetRateLimits` (used by the `/__test/reset` route). Because state lives in memory, it's per-process — fine for single-instance deploys but not horizontally scalable. `getClientIp` requires being behind a trusted proxy to avoid spoofing.
+
+### Testing
+
+Two test stacks run against a dedicated Postgres on **port 5434** ([docker-compose.test.yml](docker-compose.test.yml)). The container uses `tmpfs` for `/var/lib/postgresql`, so every restart is a clean slate. [docker-init/init-test-dbs.sql](docker-init/init-test-dbs.sql) creates two databases on first boot: `poketeams_test_unit` (for vitest) and `poketeams_test_e2e` (for Playwright). Env values for each live in [.env.test.unit](.env.test.unit) and [.env.test.e2e](.env.test.e2e) — both are committed fixtures with deliberately fake secrets, and both set `TEST_MODE="true"`.
+
+**Unit / integration tests (vitest):** specs live at `app/**/*.test.ts` and `database/**/*.test.ts`. These are not isolated unit tests — they import the real model functions and exercise them against the unit test DB. [vitest.setup.ts](vitest.setup.ts) calls `truncateAllTables()` from [app/utils/test-db.server.ts](app/utils/test-db.server.ts) in a `beforeEach`, so each test starts with empty `app_user.*` and `trainer.*` tables (sequences restarted, FKs cascaded). [vitest.config.ts](vitest.config.ts) sets `fileParallelism: false` because all tests share the single test DB. Use the `expectOk` / `expectErr` assertion helpers shown in [app/models/**tests**/app_user.test.ts](app/models/__tests__/app_user.test.ts) to narrow `ModelResult<T>` in a test.
+
+**End-to-end tests (Playwright):** specs live in [e2e/](e2e/). [playwright.config.ts](playwright.config.ts) boots `react-router dev` on port 5174 with `.env.test.e2e` loaded, then drives Chromium against it. `fullyParallel: false` and `workers: 1` because the e2e DB and the in-memory test inbox are shared state.
+
+**Test-only routes (`/__test/*`):** [app/routes.ts](app/routes.ts) conditionally appends three helper routes when `TEST_MODE === "true"`. Each route also re-checks `process.env.TEST_MODE` inside its loader/action and 404s otherwise, so a misconfigured prod build can't expose them.
+
+- `GET  /__test/last-magic-link` — returns `{ link }` from the in-memory test inbox.
+- `POST /__test/reset` — truncates the DB, clears rate limits, and clears the inbox. Playwright calls this in `beforeEach`.
+- `POST /__test/expire-last-link` — returns an expired version of the last issued link by backdating its `createdAt` and re-encrypting with the same `MAGIC_LINK_SECRET`, so decryption succeeds but the expiry check trips.
+
+**Magic link capture:** `sendMagicLinkEmail` in [app/magic-links.server.tsx](app/magic-links.server.tsx) calls `setLastMagicLink(link)` whenever `TEST_MODE === "true"`. This is the only test hook inside production code paths — keep it that way. `makeExpiredMagicLink` in the same file throws unless `TEST_MODE === "true"`.
+
+**When to write each kind of test:**
+
+- Model-layer behavior (queries, mutations, constraint mapping, case-insensitive email handling, validation that runs before the DB call) → vitest in `app/models/__tests__/`.
+- User-visible flows that cross route boundaries (magic link round-trip, session rotation, rate limiting, error pages) → Playwright in `e2e/`.
+- The middle layer (route loaders/actions, isolated React component behavior) is currently untested — Playwright covers the happy paths from the outside. Don't add React Testing Library setup unless a component grows non-trivial client-side state that's painful to drive through a browser.
 
 ### ESLint
 
@@ -226,8 +282,9 @@ In non-model catch blocks (e.g. [app/magic-links.server.tsx](app/magic-links.ser
 ### Adding a new route
 
 1. Add the schema definition to [database/schemas/](database/schemas/) if new tables are needed, export from [database/schema.ts](database/schema.ts)
-2. Generate and apply a migration (`db:generate` then `db:migrate`)
-3. Add query/mutation functions to `app/models/<domain>.server.ts`
+2. Generate and apply a migration (`db:generate` then `db:migrate`). If the schema changed, the test DBs also need migrating — `npm run db:migrate:test` covers both, and each `test:*` script runs its own pretest migration automatically.
+3. Add query/mutation functions to `app/models/<domain>.server.ts` and write vitest coverage in `app/models/__tests__/<domain>.test.ts`
 4. Create `app/routes/<name>.tsx` with loader/action + default component
 5. Register the route in [app/routes.ts](app/routes.ts)
 6. For protected routes, call `getCurrentUser(request)` from [app/utils/auth.server.ts](app/utils/auth.server.ts) in the loader and redirect to `/login` if it returns `null`
+7. For routes with non-trivial user flows, add a Playwright spec in [e2e/](e2e/)

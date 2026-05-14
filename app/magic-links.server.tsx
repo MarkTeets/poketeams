@@ -6,6 +6,7 @@ import { sendEmail } from "~/utils/emails.server";
 
 import { getAuthSession } from "./sessions";
 import { logger } from "./utils/logger.server";
+import { setLastMagicLink } from "./utils/test-inbox.server";
 
 if (typeof process.env.MAGIC_LINK_SECRET !== "string") {
   logger.fatal(
@@ -55,7 +56,11 @@ export function generateMagicLink(email: string, nonce: string) {
 const magicLinkMaxAge = 1000 * 60 * 10; // 10 minutes
 // const magicLinkMaxAge = 1000; // 1 second
 
-const expiredMagicLinkMessage = `This link has expired (links are valid for ${magicLinkMaxAge / 60000} minutes). Please request a new one from the login page.`;
+const magicMaxAgeMinutes = Number.isInteger(magicLinkMaxAge / 60000)
+  ? magicLinkMaxAge / 60000
+  : (magicLinkMaxAge / 60000).toFixed(2);
+
+const expiredMagicLinkMessage = `This link has expired (links are valid for ${magicMaxAgeMinutes} minutes). Please request a new one from the login page.`;
 
 const retryLoginMessage =
   "This link is invalid. Please request a new one from the login page, and make sure to open it on the same browser you used to log in.";
@@ -167,6 +172,27 @@ export async function validateMagicLink(
 }
 
 /**
+ * Test helper: returns an expired version of a magic link by backdating the
+ * encrypted payload's `createdAt` to the unix epoch. Re-encrypts with the same
+ * secret so decryption and schema validation still succeed — only the expiry
+ * check trips. Gated on TEST_MODE so it cannot run in production.
+ */
+export function makeExpiredMagicLink(link: string): string {
+  if (process.env.TEST_MODE !== "true") {
+    throw new Error("makeExpiredMagicLink is test-only");
+  }
+  const url = new URL(link);
+  const magic = url.searchParams.get("magic");
+  if (!magic) throw new Error("Magic param missing from link");
+  const payload = MagicLinkPayloadSchema.parse(
+    JSON.parse(cryptr.decrypt(magic)),
+  );
+  payload.createdAt = new Date(0).toISOString();
+  url.searchParams.set("magic", cryptr.encrypt(JSON.stringify(payload)));
+  return url.toString();
+}
+
+/**
  * Sends the magic link to the given email address.
  *
  * In non-production environments the link is console-logged and no email is sent.
@@ -176,6 +202,9 @@ export async function validateMagicLink(
  * @returns `{ ok: true, id }` on success; the shape matches the Resend API response.
  */
 export function sendMagicLinkEmail(link: string, email: string) {
+  if (process.env.TEST_MODE === "true") {
+    setLastMagicLink(link);
+  }
   if (process.env.NODE_ENV !== "production") {
     logger.debug({ link }, "Magic link (non-production)");
     return { ok: true, id: "console logged" } as const;

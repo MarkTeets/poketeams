@@ -6,10 +6,29 @@
     "build": "react-router build",
     "clean": "npx eslint --fix . ; npx prettier --write .",
     "dev": "react-router dev",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres",
     "db:generate": "dotenv -- drizzle-kit generate",
     "db:migrate": "dotenv -- drizzle-kit migrate",
+    "db:migrate:test:unit": "dotenv -e .env.test.unit -- drizzle-kit migrate",
+    "db:migrate:test:e2e": "dotenv -e .env.test.e2e -- drizzle-kit migrate",
+    "db:migrate:test": "npm run db:migrate:test:unit && npm run db:migrate:test:e2e",
     "db:seed": "dotenv -- tsx database/seed.ts",
+    "test-db:up": "docker compose -f docker-compose.test.yml up -d --wait",
+    "test-db:down": "docker compose -f docker-compose.test.yml down",
+    "test-db:logs": "docker compose -f docker-compose.test.yml logs -f postgres-test",
+    "test-db:reset": "npm run test-db:down && npm run test-db:up",
     "start": "react-router-serve ./build/server/index.js",
+    "test": "npm run test:unit && npm run test:e2e",
+    "pretest:e2e": "npm run db:migrate:test:e2e",
+    "test:e2e": "dotenv -e .env.test.e2e -- playwright test",
+    "pretest:e2e:ui": "npm run db:migrate:test:e2e",
+    "test:e2e:ui": "dotenv -e .env.test.e2e -- playwright test --ui",
+    "pretest:unit": "npm run db:migrate:test:unit",
+    "test:unit": "LOG_LEVEL=silent dotenv -e .env.test.unit -- vitest run",
+    "pretest:unit:watch": "npm run db:migrate:test:unit",
+    "test:unit:watch": "LOG_LEVEL=silent dotenv -e .env.test.unit -- vitest",
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
@@ -31,6 +50,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.60.0",
     "@react-router/dev": "7.14.2",
     "@tailwindcss/vite": "^4.2.4",
     "@types/eslint-plugin-jsx-a11y": "^6.10.1",
@@ -55,6 +75,7 @@
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vitest": "^4.1.6"
   }
 }

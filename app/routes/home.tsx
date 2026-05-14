@@ -8,7 +8,7 @@ export async function loader() {
     return { username: undefined, dbError: result.message };
   }
   if (!result.data) {
-    return { username: undefined, dbError: "user not found" }
+    return { username: undefined, dbError: "user not found" };
   }
   return { username: result.data.username, dbError: undefined };
 }
