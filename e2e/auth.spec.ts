@@ -237,3 +237,25 @@ test("/sign-up/complete without a pending email shows the failure page", async (
   ).toBeVisible();
   await expect(page.getByText(/no pending sign-up found/i)).toBeVisible();
 });
+
+test("logged-in user visiting /login is redirected to /app", async ({
+  page,
+  request,
+}) => {
+  const email = `e2e-logged-in-${Date.now()}@example.com`;
+
+  // Setup: sign up and land on /app with a valid post-login session.
+  await submitLoginForm(page, email);
+  const signupLink = await getMagicLink(request);
+  await page.goto(signupLink);
+  await page.getByLabel(/username/i).fill("logged_in_user");
+  await page.getByRole("button", { name: /finish sign up/i }).click();
+  await expect(page).toHaveURL(/\/app$/);
+
+  // requireLoggedOutUserMiddleware should bounce us back to /app.
+  await page.goto("/login");
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(
+    page.getByRole("heading", { name: /poketeams/i }),
+  ).not.toBeVisible();
+});
