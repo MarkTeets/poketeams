@@ -3,6 +3,7 @@ import { v4 as uuid } from "uuid";
 import { z } from "zod";
 
 import { generateMagicLink, sendMagicLinkEmail } from "~/magic-links.server";
+import { requireLoggedOutUserMiddleware } from "~/middleware/auth-middleware.server";
 import { commitAuthSession, getAuthSession } from "~/sessions";
 import { validateForm } from "~/utils/form-validation";
 import { logger } from "~/utils/logger.server";
@@ -14,6 +15,8 @@ import {
 import { sendData, sendResponseError } from "~/utils/response-package";
 
 import type { Route } from "./+types/login";
+
+export const middleware = [requireLoggedOutUserMiddleware];
 
 export async function loader({ request }: Route.LoaderArgs) {
   const cookieHeader = request.headers.get("cookie");
