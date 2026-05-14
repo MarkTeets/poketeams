@@ -2,10 +2,16 @@
   "cSpell.words": [
     "cryptr",
     "envrc",
+    "healthcheck",
+    "initdb",
     "isbot",
+    "isready",
+    "pino",
     "Pipeable",
     "poketeam",
     "poketeams",
-    "tera"
+    "tera",
+    "tmpfs",
+    "vitest"
   ]
 }

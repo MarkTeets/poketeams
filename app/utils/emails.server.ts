@@ -1,7 +1,13 @@
 import FormData from "form-data";
 import Mailgun from "mailgun.js";
 
+import { logger } from "./logger.server";
+
 if (typeof process.env.MAILGUN_API_KEY !== "string") {
+  logger.fatal(
+    { MAILGUN_API_KEY: process.env.MAILGUN_API_KEY },
+    "Missing env: MAILGUN_API_KEY",
+  );
   throw new Error("Missing env: MAILGUN_API_KEY");
 }
 
@@ -22,10 +28,14 @@ type EmailResult =
   | { ok: true; id: string }
   | { ok: false; message: string; status: number };
 
-function classifyMailgunError(err: unknown): { message: string; status: number } {
-  const status = typeof err === "object" && err !== null && "status" in err
-    ? (err as { status: number }).status
-    : 0;
+function classifyMailgunError(err: unknown): {
+  message: string;
+  status: number;
+} {
+  const status =
+    typeof err === "object" && err !== null && "status" in err
+      ? (err as { status: number }).status
+      : 0;
 
   switch (status) {
     case 401:
@@ -46,10 +56,17 @@ function classifyMailgunError(err: unknown): { message: string; status: number }
 
 export async function sendEmail(message: Message): Promise<EmailResult> {
   if (typeof process.env.MAILGUN_DOMAIN !== "string") {
+    logger.fatal(
+      { MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN },
+      "Missing env: MAILGUN_DOMAIN",
+    );
     throw new Error("Missing env: MAILGUN_DOMAIN");
   }
   try {
-    const response = await client.messages.create(process.env.MAILGUN_DOMAIN, message);
+    const response = await client.messages.create(
+      process.env.MAILGUN_DOMAIN,
+      message,
+    );
     return { ok: true, id: response.id ?? "" };
   } catch (err) {
     return { ok: false, ...classifyMailgunError(err) };

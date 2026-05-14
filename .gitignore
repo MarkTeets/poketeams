@@ -11,5 +11,14 @@
 /postgres-data/
 /drizzle-migrations/
 
+# Artifacts
+build
+coverage
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
 #Extra
 /extra/
