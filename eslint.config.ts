@@ -29,6 +29,12 @@ export default defineConfig([
     },
   },
   ...tseslint.configs.recommendedTypeChecked,
+  {
+    rules: {
+      "@typescript-eslint/no-unnecessary-type-assertion": "warn",
+      "@typescript-eslint/only-throw-error": "off",
+    },
+  },
   pluginReact.configs.flat.recommended,
   pluginReact.configs.flat["jsx-runtime"],
   { settings: { react: { version: "detect" } } },

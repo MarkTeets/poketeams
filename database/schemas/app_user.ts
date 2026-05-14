@@ -10,12 +10,9 @@ export const usersTable = appUserSchema.table(
     userId: integer().primaryKey().generatedAlwaysAsIdentity(),
     username: varchar({ length: 255 }).notNull(),
     email: varchar({ length: 255 }).notNull(),
-    password: varchar({ length: 255 }).notNull(),
     ...timestamps,
   },
-  (table) => [
-    uniqueIndex("email_unique_ignore_case").on(lower(table.email)),
-  ],
+  (table) => [uniqueIndex("email_unique_ignore_case").on(lower(table.email))],
 );
 
 export type InsertUser = typeof usersTable.$inferInsert;

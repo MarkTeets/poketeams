@@ -25,12 +25,13 @@ async function main() {
   const insertedUsers = await db
     .insert(usersTable)
     .values([
-      { username: "Mark", email: "mark@email.com", password: "changeMe" },
-      { username: "Jeff", email: "jeff@email.com", password: "changeMe" },
+      { username: "Mark", email: "mark@email.com" },
+      { username: "Jeff", email: "jeff@email.com" },
     ])
     .returning();
 
   const [mark, jeff] = insertedUsers;
+  if (!mark || !jeff) throw new Error("Failed to insert users");
 
   // ---- trainersTable ----
   const insertedTrainers = await db
@@ -42,6 +43,7 @@ async function main() {
     .returning();
 
   const [red, blue] = insertedTrainers;
+  if (!red || !blue) throw new Error("Failed to insert trainers");
 
   // ---- pokemonTable ----
   const insertedPokemon = await db
@@ -205,6 +207,8 @@ async function main() {
 
   const [sparky, charizard, mewtwo, dragonite, arcanine, lapras] =
     insertedPokemon;
+  if (!sparky || !charizard || !mewtwo || !dragonite || !arcanine || !lapras)
+    throw new Error("Failed to insert pokemon");
 
   // ---- pc_boxes ----
   const insertedBoxes = await db
@@ -217,6 +221,8 @@ async function main() {
     .returning();
 
   const [legendsBox, favoritesBox, blueBox] = insertedBoxes;
+  if (!legendsBox || !favoritesBox || !blueBox)
+    throw new Error("Failed to insert PC boxes");
 
   // ---- pokemon_to_pc_box ----
   await db.insert(pokemonToPcBoxTable).values([
@@ -237,6 +243,7 @@ async function main() {
     .returning();
 
   const [redTeam, blueTeam] = insertedTeams;
+  if (!redTeam || !blueTeam) throw new Error("Failed to insert teams");
 
   // ---- pokemon_to_team ----
   await db.insert(pokemonToTeamTable).values([

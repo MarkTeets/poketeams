@@ -48,7 +48,9 @@ export const pokemonTable = trainerSchema.table("pokemon", {
 
 export const pcBoxesTable = trainerSchema.table("pc_boxes", {
   pcBoxId: integer().primaryKey().generatedAlwaysAsIdentity(),
-  trainerId: integer().notNull().references(() => trainersTable.trainerId),
+  trainerId: integer()
+    .notNull()
+    .references(() => trainersTable.trainerId),
   boxName: varchar({ length: 255 }),
   boxOrder: integer(),
   ...timestamps,
@@ -56,14 +58,20 @@ export const pcBoxesTable = trainerSchema.table("pc_boxes", {
 
 export const pokemonToPcBoxTable = trainerSchema.table("pokemon_to_pc_box", {
   pokemonToPcBoxId: integer().primaryKey().generatedAlwaysAsIdentity(),
-  pokemonId: integer().notNull().references(() => pokemonTable.pokemonId),
-  pcBoxId: integer().notNull().references(() => pcBoxesTable.pcBoxId),
+  pokemonId: integer()
+    .notNull()
+    .references(() => pokemonTable.pokemonId),
+  pcBoxId: integer()
+    .notNull()
+    .references(() => pcBoxesTable.pcBoxId),
   ...timestamps,
 });
 
 export const teamsTable = trainerSchema.table("teams", {
   teamId: integer().primaryKey().generatedAlwaysAsIdentity(),
-  trainerId: integer().notNull().references(() => trainersTable.trainerId),
+  trainerId: integer()
+    .notNull()
+    .references(() => trainersTable.trainerId),
   teamName: varchar({ length: 255 }),
   teamOrder: integer(),
   ...timestamps,
@@ -71,7 +79,11 @@ export const teamsTable = trainerSchema.table("teams", {
 
 export const pokemonToTeamTable = trainerSchema.table("pokemon_to_team", {
   pokemonToTeamId: integer().primaryKey().generatedAlwaysAsIdentity(),
-  pokemonId: integer().notNull().references(() => pokemonTable.pokemonId),
-  teamId: integer().notNull().references(() => teamsTable.teamId),
+  pokemonId: integer()
+    .notNull()
+    .references(() => pokemonTable.pokemonId),
+  teamId: integer()
+    .notNull()
+    .references(() => teamsTable.teamId),
   ...timestamps,
 });
