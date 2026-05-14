@@ -18,6 +18,8 @@ const testRoutes =
 export default [
   index("routes/home.tsx"),
   route("app", "routes/app.tsx"),
+  route("species-finder", "routes/species-finder.tsx"),
+  route("species-detail", "routes/species-detail.tsx"),
   route("login", "routes/login.tsx"),
   route("logout", "routes/logout.tsx"),
   route("validate-magic-link", "routes/validate-magic-link.tsx"),
