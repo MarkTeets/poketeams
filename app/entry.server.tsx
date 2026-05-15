@@ -6,8 +6,18 @@ import type { RenderToPipeableStreamOptions } from "react-dom/server";
 import { renderToPipeableStream } from "react-dom/server";
 import type { EntryContext, RouterContextProvider } from "react-router";
 import { ServerRouter } from "react-router";
+import { type HandleErrorFunction } from "react-router";
+
+import { logger } from "./utils/logger.server";
 
 export const streamTimeout = 5_000;
+
+export const handleError: HandleErrorFunction = (error, { request }) => {
+  // React Router may abort some interrupted requests, don't log those
+  if (!request.signal.aborted) {
+    logger.error({ err: error, request }, "React router server error");
+  }
+};
 
 export default function handleRequest(
   request: Request,
