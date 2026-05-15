@@ -1,15 +1,22 @@
 {
   "cSpell.words": [
     "cryptr",
+    "descs",
     "envrc",
+    "firmnesses",
     "healthcheck",
     "initdb",
     "isbot",
     "isready",
+    "Overworld",
     "pino",
     "Pipeable",
+    "pokeapi",
+    "pokeathlon",
+    "pokedexes",
     "poketeam",
     "poketeams",
+    "prefs",
     "tera",
     "tmpfs",
     "vitest"

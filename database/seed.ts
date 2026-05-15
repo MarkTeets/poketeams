@@ -2,7 +2,7 @@ import { db } from "./db";
 import { usersTable } from "./schemas/app_user";
 import {
   pcBoxesTable,
-  pokemonTable,
+  pokemonInstanceTable,
   pokemonToPcBoxTable,
   pokemonToTeamTable,
   teamsTable,
@@ -16,7 +16,7 @@ async function main() {
   await db.delete(pokemonToPcBoxTable);
   await db.delete(teamsTable);
   await db.delete(pcBoxesTable);
-  await db.delete(pokemonTable);
+  await db.delete(pokemonInstanceTable);
   await db.delete(trainersTable);
   await db.delete(usersTable);
   /* eslint-enable drizzle/enforce-delete-with-where */
@@ -45,9 +45,9 @@ async function main() {
   const [red, blue] = insertedTrainers;
   if (!red || !blue) throw new Error("Failed to insert trainers");
 
-  // ---- pokemonTable ----
+  // ---- pokemonInstanceTable ----
   const insertedPokemon = await db
-    .insert(pokemonTable)
+    .insert(pokemonInstanceTable)
     .values([
       {
         pokeApiId: 25,
