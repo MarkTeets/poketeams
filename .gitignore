@@ -22,3 +22,6 @@ coverage
 
 #Extra
 /extra/
+
+#Cache
+/server-cache/

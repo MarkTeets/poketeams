@@ -1,5 +1,5 @@
-import { db } from "./db";
-import { usersTable } from "./schemas/app_user";
+import { db } from "../db";
+import { usersTable } from "../schemas/app_user";
 import {
   pcBoxesTable,
   pokemonInstanceTable,
@@ -7,7 +7,7 @@ import {
   pokemonToTeamTable,
   teamsTable,
   trainersTable,
-} from "./schemas/trainer";
+} from "../schemas/trainer";
 
 async function main() {
   // Delete in reverse FK order so constraints don't fire

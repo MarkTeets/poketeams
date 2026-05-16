@@ -1,4 +1,5 @@
 import { useLoaderData } from "react-router";
+
 import type { Route } from "./+types/$species-detail";
 
 export async function loader({ params }: Route.LoaderArgs) {
