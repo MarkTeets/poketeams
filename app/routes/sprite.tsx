@@ -22,17 +22,30 @@ export async function loader({ params }: Route.LoaderArgs) {
 
     if (!response.ok) {
       logger.warn({ response }, `pokeapi failed to retrieve ${url}`);
-      return sendResponseError({ message: "PokeApi failed to send image" });
+      return sendResponseError({ message: "PokeApi failed to send image" }, 500);
     }
 
     const buffer = await response.arrayBuffer();
     const contentType = response.headers.get("Content-Type") ?? "image/png";
 
-    file = await fileStorage.put(
-      key,
-      new File([buffer], key, { type: contentType }),
-    );
-    logger.debug({ key }, "sprite written to cache");
+    try {
+      file = await fileStorage.put(
+        key,
+        new File([buffer], key, { type: contentType }),
+      );
+      logger.debug({ key }, "sprite written to cache");
+    } catch (err) {
+      logger.error(
+        { key, err },
+        "sprite cache write failed, serving from buffer",
+      );
+      return new Response(buffer, {
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
   }
 
   return new Response(file.stream(), {
