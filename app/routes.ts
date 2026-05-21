@@ -20,6 +20,7 @@ export default [
   route("app", "routes/app.tsx"),
   route("species-finder", "routes/species-finder.tsx"),
   route("species/:pokeApiId", "routes/$species-detail.tsx"),
+  route("sprite/:url", "routes/sprite.tsx"),
   route("login", "routes/login.tsx"),
   route("logout", "routes/logout.tsx"),
   route("validate-magic-link", "routes/validate-magic-link.tsx"),
