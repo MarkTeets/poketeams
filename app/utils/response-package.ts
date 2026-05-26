@@ -15,12 +15,12 @@ export const sendData = <T>(
   return RRdata<ActionResponsePackage<T>>(data, init);
 };
 
-export const responseDataPackage = <T>(info: T) => {
+export const responseDataPackage = <T>(data: T) => {
   return {
     success: true,
-    data: info,
+    data: data,
     errors: undefined,
-  };
+  } as const;
 };
 
 export const responseErrorPackage = (errors: FieldErrors) => {
@@ -28,11 +28,11 @@ export const responseErrorPackage = (errors: FieldErrors) => {
     success: false,
     data: undefined,
     errors,
-  };
+  } as const;
 };
 
-export const sendResponseData = <T>(info: T, status = 200) => {
-  return sendData(responseDataPackage(info), { status });
+export const sendResponseData = <T>(data: T, status = 200) => {
+  return sendData(responseDataPackage(data), { status });
 };
 
 export const sendResponseError = (errors: FieldErrors, status = 400) => {
