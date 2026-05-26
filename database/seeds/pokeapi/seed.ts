@@ -111,6 +111,7 @@ import {
   pokemonPastAbilitiesTable,
   pokemonPastStatsTable,
   pokemonPastTypesTable,
+  pokemonSpritesTable,
   pokemonStatsTable,
   pokemonTable,
   pokemonTypesTable,
@@ -1905,42 +1906,81 @@ async function seedPokemonSpecies() {
 }
 
 type ChainNode = {
-  species: { url: string };
+  species: { name: string; url: string };
   evolution_details: {
+    base_form: { name: string; url: string } | null;
     trigger: { url: string };
     item: { url: string } | null;
     held_item: { url: string } | null;
     known_move: { url: string } | null;
     known_move_type: { url: string } | null;
+    used_move: { url: string } | null;
     location: { url: string } | null;
     party_species: { url: string } | null;
     party_type: { url: string } | null;
     trade_species: { url: string } | null;
     gender: number | null;
-    region: { url: string } | null;
+    region: { name: string; url: string } | null;
     min_level: number | null;
     min_happiness: number | null;
     min_beauty: number | null;
     min_affection: number | null;
+    min_damage_taken: number | null;
+    min_move_count: number | null;
+    min_steps: number | null;
     time_of_day: string;
     relative_physical_stats: number | null;
     needs_overworld_rain: boolean;
+    needs_multiplayer: boolean;
     turn_upside_down: boolean;
   }[];
   evolves_to: ChainNode[];
 };
 
-function collectEvolutions(chainId: number, node: ChainNode): object[] {
+function collectEvolutions(
+  chainId: number,
+  node: ChainNode,
+  pokemonNameMap: Map<string, number>,
+  fromSpeciesId?: number,
+  fromSpeciesName?: string,
+): object[] {
   const rows: object[] = [];
+  const currentSpeciesId = idFromUrl(node.species.url)!;
+  const currentSpeciesName = node.species.name;
   for (const detail of node.evolution_details) {
+    let evolveStartPokemonId: number | null =
+      pokemonNameMap.get(fromSpeciesName ?? "") ?? null;
+    if (detail.base_form) {
+      evolveStartPokemonId = idFromUrl(detail.base_form.url) ?? null;
+    }
+
+    let evolveEndPokemonId: number | null =
+      pokemonNameMap.get(currentSpeciesName) ?? null;
+    if (detail.base_form) {
+      const suffix = detail.base_form.name.slice(
+        detail.base_form.name.lastIndexOf("-"),
+      );
+      evolveEndPokemonId =
+        pokemonNameMap.get(currentSpeciesName + suffix) ?? evolveEndPokemonId;
+    } else if (detail.region) {
+      evolveEndPokemonId =
+        pokemonNameMap.get(currentSpeciesName + "-" + detail.region.name) ??
+        evolveEndPokemonId;
+    }
+
     rows.push({
       evolutionChainId: chainId,
-      evolvedSpeciesId: idFromUrl(node.species.url)!,
+      evolveStartSpeciesId: fromSpeciesId,
+      evolveStartPokemonId,
+      evolveEndSpeciesId: currentSpeciesId,
+      evolveEndPokemonId,
+      baseForm: detail.base_form?.name ?? null,
       triggerId: idFromUrl(detail.trigger.url)!,
       itemId: idFromUrl(detail.item?.url),
       heldItemId: idFromUrl(detail.held_item?.url),
       knownMoveId: idFromUrl(detail.known_move?.url),
       knownMoveTypeId: idFromUrl(detail.known_move_type?.url),
+      usedMoveId: idFromUrl(detail.used_move?.url),
       locationId: idFromUrl(detail.location?.url),
       partySpeciesId: idFromUrl(detail.party_species?.url),
       partyTypeId: idFromUrl(detail.party_type?.url),
@@ -1951,15 +1991,18 @@ function collectEvolutions(chainId: number, node: ChainNode): object[] {
       minHappiness: detail.min_happiness,
       minBeauty: detail.min_beauty,
       minAffection: detail.min_affection,
+      minDamageTaken: detail.min_damage_taken,
+      minMoveCount: detail.min_move_count,
+      minSteps: detail.min_steps,
       timeOfDay: detail.time_of_day || null,
       relativePhysicalStats: detail.relative_physical_stats,
       needsOverworldRain: detail.needs_overworld_rain ?? false,
-      needsMultiplayer: false,
+      needsMultiplayer: detail.needs_multiplayer ?? false,
       turnUpsideDown: detail.turn_upside_down ?? false,
     });
   }
   for (const child of node.evolves_to) {
-    rows.push(...collectEvolutions(chainId, child));
+    rows.push(...collectEvolutions(chainId, child, pokemonNameMap, currentSpeciesId, currentSpeciesName));
   }
   return rows;
 }
@@ -1970,6 +2013,16 @@ async function seedEvolutionChains() {
     baby_trigger_item: { url: string } | null;
     chain: ChainNode;
   };
+  type Species = { varieties: { pokemon: { name: string; url: string } }[] };
+  const speciesRows = (await readAllFromCache("pokemon-species")) as Species[];
+  const pokemonNameMap = new Map<string, number>();
+  for (const s of speciesRows) {
+    for (const v of s.varieties) {
+      const id = idFromUrl(v.pokemon.url);
+      if (id !== null) pokemonNameMap.set(v.pokemon.name, id);
+    }
+  }
+
   const rows = (await readAllFromCache("evolution-chain")) as Chain[];
   await insertChunked(
     evolutionChainsTable,
@@ -1979,7 +2032,9 @@ async function seedEvolutionChains() {
       url: `https://pokeapi.co/api/v2/evolution-chain/${r.id}/`,
     })),
   );
-  const evolutions = rows.flatMap((r) => collectEvolutions(r.id, r.chain));
+  const evolutions = rows.flatMap((r) =>
+    collectEvolutions(r.id, r.chain, pokemonNameMap),
+  );
   await insertChunked(pokemonSpeciesEvolutionsTable, evolutions);
   logger.info({ count: rows.length }, "evolution-chains seeded");
 }
@@ -2055,6 +2110,45 @@ async function seedPokedexes() {
   logger.info({ count: rows.length }, "pokedexes seeded");
 }
 
+type SpriteRow = { pokemonId: number; source: string; variant: string; url: string };
+
+function flattenSprites(pokemonId: number, sprites: Record<string, unknown>): SpriteRow[] {
+  const rows: SpriteRow[] = [];
+
+  for (const [variant, val] of Object.entries(sprites)) {
+    if (variant === "other" || variant === "versions") continue;
+    if (typeof val === "string") rows.push({ pokemonId, source: "default", variant, url: val });
+  }
+
+  const other = sprites["other"] as Record<string, Record<string, string | null>> | undefined;
+  if (other) {
+    for (const [source, variantMap] of Object.entries(other)) {
+      for (const [variant, url] of Object.entries(variantMap)) {
+        if (typeof url === "string") rows.push({ pokemonId, source, variant, url });
+      }
+    }
+  }
+
+  const versions = sprites["versions"] as Record<string, Record<string, Record<string, unknown>>> | undefined;
+  if (versions) {
+    for (const gameMap of Object.values(versions)) {
+      for (const [game, variantMap] of Object.entries(gameMap)) {
+        for (const [variant, val] of Object.entries(variantMap)) {
+          if (variant === "animated" && typeof val === "object" && val !== null) {
+            for (const [animVariant, url] of Object.entries(val as Record<string, string | null>)) {
+              if (typeof url === "string") rows.push({ pokemonId, source: `${game}-animated`, variant: animVariant, url });
+            }
+          } else if (typeof val === "string") {
+            rows.push({ pokemonId, source: game, variant, url: val });
+          }
+        }
+      }
+    }
+  }
+
+  return rows;
+}
+
 async function seedPokemon() {
   type PastType = {
     generation: { url: string };
@@ -2102,6 +2196,7 @@ async function seedPokemon() {
     past_types: PastType[] | undefined;
     past_abilities: PastAbility[] | undefined;
     past_stats: PastStat[] | undefined;
+    sprites: Record<string, unknown>;
   };
 
   const files = await (async () => {
@@ -2236,6 +2331,7 @@ async function seedPokemon() {
         ),
       );
     }
+    await insertChunked(pokemonSpritesTable, flattenSprites(p.id, p.sprites));
   }
   logger.info({ count: files.length }, "pokemon seeded");
 }

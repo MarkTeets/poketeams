@@ -228,6 +228,27 @@ export const pokemonPastAbilitiesTable = pokeApiSchema.table(
   ],
 );
 
+export const pokemonSpritesTable = pokeApiSchema.table(
+  "pokemon_sprites",
+  {
+    pokemonSpriteId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    pokemonId: integer()
+      .notNull()
+      .references(() => pokemonTable.pokemonId),
+    source: varchar({ length: 100 }).notNull(),
+    variant: varchar({ length: 100 }).notNull(),
+    url: varchar({ length: 500 }).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("pokemon_sprites_pokemon_id_source_variant_unique").on(
+      table.pokemonId,
+      table.source,
+      table.variant,
+    ),
+  ],
+);
+
 export const pokemonPastStatsTable = pokeApiSchema.table(
   "pokemon_past_stats",
   {

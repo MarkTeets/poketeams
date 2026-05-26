@@ -199,15 +199,23 @@ export const pokemonSpeciesEvolutionsTable = pokeApiSchema.table(
     evolutionChainId: integer()
       .notNull()
       .references(() => evolutionChainsTable.evolutionChainId),
-    evolvedSpeciesId: integer()
+    evolveStartSpeciesId: integer()
       .notNull()
       .references(() => pokemonSpeciesTable.pokemonSpeciesId),
+    // Implicit FK to pokeapi.pokemon — no .references() to avoid circular import with pokemon.ts
+    evolveStartPokemonId: integer(),
+    evolveEndSpeciesId: integer()
+      .notNull()
+      .references(() => pokemonSpeciesTable.pokemonSpeciesId),
+    // Implicit FK to pokeapi.pokemon — no .references() to avoid circular import with pokemon.ts
+    evolveEndPokemonId: integer(),
     triggerId: integer()
       .notNull()
       .references(() => evolutionTriggersTable.evolutionTriggerId),
     itemId: integer().references(() => itemsTable.itemId),
     heldItemId: integer().references(() => itemsTable.itemId),
     knownMoveId: integer().references(() => movesTable.moveId),
+    usedMoveId: integer().references(() => movesTable.moveId),
     knownMoveTypeId: integer().references(() => typesTable.typeId),
     locationId: integer().references(() => locationsTable.locationId),
     partySpeciesId: integer().references(
