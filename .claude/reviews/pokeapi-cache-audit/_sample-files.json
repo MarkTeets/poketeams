@@ -1,0 +1,131 @@
+{
+  "_meta": {
+    "generated": "2026-05-27",
+    "purpose": "Curated sample-file lists per endpoint used in the first audit run. Re-runs can reuse these for apples-to-apples diff, or pick different files to discover new shapes. Each entry: reason (variety dimension) + files actually read.",
+    "see_also": "AUDIT_PROCESS.md for the file-selection heuristic"
+  },
+  "language": { "reason": "small list — read all 14", "files": "all" },
+  "generation": { "reason": "small list — read all 10", "files": "all" },
+  "version": {
+    "reason": "spread across all gens",
+    "files": ["1.json", "5.json", "10.json", "17.json", "22.json", "26.json", "30.json", "40.json", "45.json", "50.json"]
+  },
+  "version-group": {
+    "reason": "mix early and late gens",
+    "files": ["1.json", "3.json", "6.json", "10.json", "15.json", "20.json", "25.json", "28.json", "30.json", "33.json"]
+  },
+  "gender": { "reason": "small list — read all 4", "files": "all" },
+  "growth-rate": { "reason": "small list — read all 7", "files": "all" },
+  "pokemon-color": { "reason": "small list — read all 11", "files": "all" },
+  "pokemon-shape": { "reason": "small list — read all 15", "files": "all" },
+  "pokemon-habitat": { "reason": "small list — read all 10", "files": "all" },
+  "egg-group": { "reason": "small list — read all 16", "files": "all" },
+  "evolution-trigger": { "reason": "small list — read all 17", "files": "all" },
+  "move-damage-class": { "reason": "small list — read all 4", "files": "all" },
+  "move-battle-style": { "reason": "small list — read all 4", "files": "all" },
+  "move-category": { "reason": "small list — read all 15", "files": "all" },
+  "move-learn-method": { "reason": "small list — read all 12", "files": "all" },
+  "move-ailment": { "reason": "small list — read all 23", "files": "all" },
+  "move-target": { "reason": "small list — read all 17", "files": "all" },
+  "item-pocket": { "reason": "small list — read all 9", "files": "all" },
+  "item-attribute": { "reason": "small list — read all 9", "files": "all" },
+  "item-fling-effect": { "reason": "small list — read all 8", "files": "all" },
+  "pal-park-area": { "reason": "small list — read all 6", "files": "all" },
+  "pokeathlon-stat": { "reason": "small list — read all 6", "files": "all" },
+  "contest-type": { "reason": "small list — read all 6", "files": "all" },
+  "berry-firmness": { "reason": "small list — read all 6", "files": "all" },
+  "berry-flavor": { "reason": "small list — read all 6", "files": "all" },
+  "encounter-condition": { "reason": "small list — read all 20", "files": "all" },
+  "encounter-condition-value": {
+    "reason": "low/mid/high IDs across condition categories",
+    "files": ["1.json", "5.json", "10.json", "50.json", "75.json", "100.json", "125.json", "150.json", "175.json", "192.json"]
+  },
+  "encounter-method": {
+    "reason": "mix common (walk, surf) and uncommon (rock-smash, headbutt)",
+    "files": ["1.json", "5.json", "10.json", "15.json", "20.json", "25.json", "30.json", "40.json", "50.json", "56.json"]
+  },
+  "stat": { "reason": "small list — read all 9 (IDs 1-9, no 10.json)", "files": "all" },
+  "characteristic": {
+    "reason": "spread across stat categories",
+    "files": ["1.json", "2.json", "6.json", "10.json", "11.json", "15.json", "20.json", "25.json", "28.json", "30.json"]
+  },
+  "nature": {
+    "reason": "mix of stat-affecting and neutral natures",
+    "files": ["1.json", "2.json", "5.json", "8.json", "10.json", "12.json", "15.json", "18.json", "20.json", "25.json"]
+  },
+  "type": {
+    "reason": "core types + later-gen types + special (past/shadow)",
+    "files": ["1.json", "2.json", "4.json", "9.json", "10.json", "13.json", "17.json", "18.json", "10001.json", "10002.json"]
+  },
+  "ability": {
+    "reason": "gen-1 commons (stench, static, wonder-guard, overgrow) + arceus-only (multitype) + recent gens + past_ability IDs (10001+)",
+    "files": ["1.json", "9.json", "25.json", "65.json", "121.json", "152.json", "154.json", "281.json", "10001.json", "300.json"]
+  },
+  "move": {
+    "reason": "basic physical, status, recovery, recoil, multi-turn, struggle (special meta), z/max/gmax range",
+    "files": ["1.json", "2.json", "7.json", "14.json", "33.json", "132.json", "165.json", "235.json", "344.json", "622.json"]
+  },
+  "item": {
+    "reason": "poke-balls + healing + evolution-stones + held + key + berry-as-item",
+    "files": ["1.json", "2.json", "17.json", "18.json", "82.json", "85.json", "126.json", "214.json", "245.json", "537.json"]
+  },
+  "item-category": {
+    "reason": "medicine/balls/holdable/stones/key categories",
+    "files": ["1.json", "5.json", "10.json", "20.json", "30.json", "35.json", "40.json", "45.json", "50.json", "55.json"]
+  },
+  "berry": {
+    "reason": "various flavors and effects",
+    "files": ["1.json", "2.json", "10.json", "12.json", "14.json", "20.json", "35.json", "40.json", "50.json", "65.json"]
+  },
+  "machine": {
+    "reason": "TMs/HMs across version-groups (gen-1 through gen-9)",
+    "files": ["1.json", "100.json", "500.json", "1000.json", "1500.json", "1800.json", "2000.json", "2100.json", "2200.json", "2213.json"]
+  },
+  "contest-effect": {
+    "reason": "spread across appeal/jam values",
+    "files": ["1.json", "5.json", "10.json", "15.json", "20.json", "22.json", "25.json", "28.json", "30.json", "34.json"]
+  },
+  "super-contest-effect": {
+    "reason": "spread across IDs",
+    "files": ["1.json", "3.json", "5.json", "8.json", "10.json", "13.json", "15.json", "18.json", "20.json", "23.json"]
+  },
+  "region": { "reason": "small list — read all 12", "files": "all" },
+  "location": {
+    "reason": "cities + routes + caves + interiors + DLC, across regions",
+    "files": ["1.json", "65.json", "88.json", "136.json", "147.json", "502.json", "805.json", "1000.json", "1090.json", "1113.json"]
+  },
+  "location-area": {
+    "reason": "spread across IDs to sample variety of encounter data",
+    "files": ["1.json", "50.json", "100.json", "200.json", "400.json", "500.json", "800.json", "1000.json", "1200.json", "1245.json"]
+  },
+  "pokedex": {
+    "reason": "national + regional + DLC + city dexes",
+    "files": ["1.json", "2.json", "3.json", "4.json", "7.json", "11.json", "12.json", "14.json", "26.json", "35.json"]
+  },
+  "pokemon": {
+    "reason": "basic, mega-form parent, many-form, special, type-change-gen-2 (magnemite gained Steel in Gen 2), legendary+mega, type-change-gen-6 (jigglypuff gained Fairy in Gen 6), multi-form, gen-specific abilities, DLC, alt-form (10000-range), mega",
+    "files": ["1.json", "6.json", "25.json", "39.json", "81.json", "132.json", "150.json", "386.json", "658.json", "890.json", "10001.json", "10034.json"],
+    "type_change_exemplars": {
+      "39": "jigglypuff — Normal only (Gen 1-5) → Normal/Fairy (Gen 6+); past_types should contain one entry per pre-Gen-6 generation",
+      "81": "magnemite — Electric only (Gen 1) → Electric/Steel (Gen 2+); past_types should contain Gen 1 entry",
+      "82_optional": "magneton — same Steel-type-add story plus past_stats from Gen 6 SpA/SpD buff; substitute if more historical-data coverage needed"
+    }
+  },
+  "pokemon-form": {
+    "reason": "normal + mega-x + gmax + alolan + galarian + hisuian + paldean + totem + battle-only-crowned + baseline",
+    "files": ["1.json", "25.json", "10134.json", "10365.json", "10193.json", "10320.json", "10407.json", "10419.json", "10195.json", "10357.json"]
+  },
+  "pokemon-species": {
+    "reason": "baseline + multi-form + special + regional-evolver + mr-mime (regional variant added later) + special + jigglypuff (paired with pokemon/39 for type-change cross-check) + baby + legendary + arceus (multi-form legend)",
+    "files": ["1.json", "4.json", "25.json", "39.json", "52.json", "122.json", "132.json", "133.json", "150.json", "440.json", "493.json"],
+    "note": "Species data itself doesn't have type history (types are on pokemon, not species), but keeping jigglypuff in the species sample lets you cross-reference the corresponding pokemon/39 file when verifying past_types vs current types alignment."
+  },
+  "evolution-chain": {
+    "reason": "multi-branch (eevee), single linear (bulbasaur), trade, item, level-with-move, regional, happiness, gendered, 3-branch, long-chain",
+    "files": ["1.json", "10.json", "67.json", "32.json", "133.json", "212.json", "302.json", "401.json", "470.json", "542.json"]
+  },
+  "pokemon-location-area": {
+    "reason": "rich-encounter + sparse + edge cases (empty arrays for legendaries/alt-forms)",
+    "files": ["1.json", "16.json", "19.json", "41.json", "60.json", "132.json", "150.json", "386.json", "890.json", "10001.json"]
+  }
+}
