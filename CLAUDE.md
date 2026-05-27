@@ -17,7 +17,11 @@ npm run db:up        # Start dev Postgres on port 5433 (docker-compose.yml)
 npm run db:down      # Stop dev Postgres
 npm run db:generate  # Generate migration from schema changes
 npm run db:migrate   # Apply pending migrations to dev DB
-npm run db:seed      # Seed the database
+npm run pokeapi:seed # Seed pokeapi tables from server-cache (heavy — run before db:seed)
+npm run db:seed      # Seed fixture data (database/seeds/fixtures.ts) — depends on pokeapi data
+npm run pokeapi:download  # Refresh server-cache from pokeapi.co (run before pokeapi:seed if cache is stale)
+npm run pokeapi:validate  # Validate server-cache integrity
+npm run pokeapi:sync      # download + validate + seed in one go
 
 # Test databases (separate Postgres instance on port 5434)
 npm run test-db:up     # Start the test Postgres (creates poketeams_test_unit + poketeams_test_e2e)
@@ -99,8 +103,17 @@ The database uses Postgres schemas (not the same as Drizzle schema files):
 
 - `app_user` — user accounts (`app_user.users`)
 - `trainer` — trainer profiles, pokemon, PC boxes, teams
+- `pokeapi` — ~135 tables mirroring [pokeapi.co](https://pokeapi.co)'s data model (pokemon, species, moves, abilities, types, items, locations, etc.). Populated by `npm run pokeapi:seed` from cached JSON in [server-cache/pokeapi.co/api/v2/](server-cache/pokeapi.co/api/v2/). Treat as read-only static reference data; never mutated outside seed.
 
 All tables include `createdAt`, `updatedAt`, `deletedAt` via the `timestamps` helper in [database/utils/columnHelpers.ts](database/utils/columnHelpers.ts). Drizzle is configured with `casing: "snake_case"`, so TypeScript uses camelCase (`userId`) and the DB columns use snake_case (`user_id`). Email uniqueness is enforced case-insensitively via a `lower(email)` unique index.
+
+**Before making `pokeapi` schema changes:** consult [.claude/reviews/pokeapi-cache-audit/](.claude/reviews/pokeapi-cache-audit/) — the directory contains:
+- [AUDIT_RECOMMENDATIONS.md](.claude/reviews/pokeapi-cache-audit/AUDIT_RECOMMENDATIONS.md) — current locked-in plan for schema additions/fixes/seed updates
+- [AUDIT_COVERAGE.md](.claude/reviews/pokeapi-cache-audit/AUDIT_COVERAGE.md) — per-endpoint field-by-field JSON↔DB coverage matrix
+- [AUDIT_PROCESS.md](.claude/reviews/pokeapi-cache-audit/AUDIT_PROCESS.md) — playbook for re-running the audit (~13 batches)
+- [01-tiny-lookups.md](.claude/reviews/pokeapi-cache-audit/01-tiny-lookups.md) through [13-schema-design.md](.claude/reviews/pokeapi-cache-audit/13-schema-design.md) — raw per-batch findings
+
+Recommendations §A lists custom additions (e.g. `pokemonSpritesTable`, evolution table extras) that must not be regressed by any cleanup work.
 
 ### Auth flow
 

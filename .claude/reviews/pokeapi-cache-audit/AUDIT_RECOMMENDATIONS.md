@@ -67,11 +67,11 @@ Captures `growth-rate.levels[]` — full 100-row EXP-per-level table per growth 
 
 **File:** [database/schemas/pokeapi/regions.ts](../../../database/schemas/pokeapi/regions.ts) (where `growthRatesTable` lives). Shape: `(growthRateId, level, experience)` with unique `(growthRateId, level)`.
 
-### [medium] Add `itemSpritesTable` OR `itemsTable.spriteUrl` column
+### [medium] Add `itemsTable.spriteUrl` flat column
 
-`item.sprites.default` (single URL per item) is dropped. Either add a flat column (simplest — most items have only one sprite) or a sprite table for parity with pokemon.
+**Decision:** flat column (not separate table). Most items have only one sprite URL — a separate table is overkill.
 
-**Recommended:** add `spriteUrl: varchar(500)` directly on `itemsTable` ([items.ts](../../../database/schemas/pokeapi/items.ts)).
+Add `spriteUrl: varchar({ length: 500 })` (nullable) directly on `itemsTable` ([items.ts](../../../database/schemas/pokeapi/items.ts)). Seed: `spriteUrl: item.sprites?.default ?? null`.
 
 ### [low] Add `regionsTable.mainGenerationId`
 
@@ -114,13 +114,59 @@ JSON shape (from fire/10.json): `sprites.<generation-name>.<game>.{name_icon, sy
 
 Currently `gender.pokemon_species_details` is dropped, but the same data lives in `pokemon_species.gender_rate` (which IS persisted). **No new table needed** — verify the app queries species directly for gender rates, then mark this as covered.
 
-### [low] Decide: capture `*_history` data?
+### [high] Add generation-aware historical data (drives trainer-generation feature)
 
-Recurring pattern (Batches 03, 04, 05 + pokemon.past_*): `type.past_damage_relations`, `ability.effect_changes`, `move.past_values`, `move.effect_changes`. The pokemon-side history (past_types, past_abilities, past_stats) IS captured; the move/ability/type sides are not. Either:
-- (a) Add per-endpoint history tables for parity, OR
-- (b) Explicitly document "historical balance data is out of scope; query current values only."
+**Decision:** **Pattern B** — base table holds latest values; parallel `*History*` tables hold per-generation (or per-version-group) overrides. Pokemon-side already follows this with `pokemonPastTypesTable` etc., but those names will be **renamed for consistency** with the new naming convention.
 
-Recommend (b) unless the app grows a "Pokémon balance changelog" feature.
+**Naming convention:** `<entity><Field>HistoryTable` (suffix-history). DB names use snake_case. Existing `pokemon_past_*` tables get renamed to `pokemon_*_history`.
+
+#### Renames (existing pokemon-side tables)
+
+| Current | New |
+|---|---|
+| `pokemonPastTypesTable` (`pokemon_past_types`) | `pokemonTypeHistoryTable` (`pokemon_type_history`) |
+| `pokemonPastAbilitiesTable` (`pokemon_past_abilities`) | `pokemonAbilityHistoryTable` (`pokemon_ability_history`) |
+| `pokemonPastStatsTable` (`pokemon_past_stats`) | `pokemonStatHistoryTable` (`pokemon_stat_history`) |
+
+Migration uses `RENAME TABLE` (no data motion). Update [database/schemas/pokeapi/pokemon.ts](../../../database/schemas/pokeapi/pokemon.ts) and any imports.
+
+#### New tables
+
+| Source JSON | New table (camelCase / snake_case) | Shape |
+|---|---|---|
+| `type.past_damage_relations[]` | `typeEfficacyHistoryTable` / `type_efficacy_history` | surrogate PK, `(generationId, attackingTypeId, defendingTypeId, damageFactor)`. Mirrors `typeEfficacyTable` plus `generationId` discriminator. uniqueIndex on `(generationId, attackingTypeId, defendingTypeId)`. |
+| `ability.effect_changes[]` | `abilityEffectHistoryTable` / `ability_effect_history` | surrogate PK, `(abilityId, versionGroupId, localLanguageId, effect, shortEffect)`. uniqueIndex on `(abilityId, versionGroupId, localLanguageId)`. |
+| `move.past_values[]` scalars | `moveValueHistoryTable` / `move_value_history` | surrogate PK, `(moveId, versionGroupId, accuracy, effectChance, power, pp, typeId)` — all scalars nullable. uniqueIndex on `(moveId, versionGroupId)`. |
+| `move.past_values[].effect_entries[]` | `moveValueHistoryEffectEntriesTable` / `move_value_history_effect_entries` | surrogate PK, FK to `moveValueHistoryTable` + `(localLanguageId, effect, shortEffect)`. uniqueIndex on `(moveValueHistoryId, localLanguageId)`. |
+| `move.effect_changes[]` | `moveEffectHistoryTable` / `move_effect_history` | surrogate PK, `(moveId, versionGroupId, localLanguageId, effect)`. uniqueIndex on `(moveId, versionGroupId, localLanguageId)`. |
+
+#### Query helper
+
+Add `app/utils/generation-history.ts` exporting:
+```ts
+// Generic helper: resolve a field at a given generation by checking the history table
+// first (most recent override <= trainerGeneration), falling back to the base table value.
+export async function valueAtGeneration<T>(...)
+```
+Per-model logic can use this OR write its own SQL — both supported. The helper just spares the boilerplate for simple cases.
+
+#### Discriminator: generation vs version_group
+
+- **Type efficacy** changes are tracked by **generation** (Gen 6 added Fairy, Gen 1 ghost vs psychic, etc.) → use `generationId`.
+- **Move past_values, ability/move effect_changes** are tracked by **version_group** in PokeAPI's data → use `versionGroupId`.
+
+For trainer-gen queries against version-group-keyed history, resolve the trainer's selected generation to the latest version_group for that generation, then apply the same "most recent override <=" logic.
+
+#### Trainer-generation query pattern
+
+For a trainer that has selected generation N:
+1. Look up overrides in the relevant history table where `generationId <= N` (or `versionGroupId.generationId <= N`), ordered DESC, take the first match.
+2. If no override found, fall back to the base table's current value.
+3. The helper utility wraps this; ad-hoc model queries can replicate inline.
+
+#### When to seed
+
+After all base tables and reference data are seeded — history tables FK back to types/moves/abilities/version-groups/generations/languages which must exist first.
 
 ---
 
@@ -193,11 +239,28 @@ The other two implicit FKs (varieties.pokemonId, evolutions.evolveStart/EndPokem
    //  see meta.pokeapi_seed_runs for the audit trail)
    ```
 
-4. **Remove `...timestamps,` from every table declaration** in [database/schemas/pokeapi/](../../../database/schemas/pokeapi/) (18 files, ~135 tables). Generate one migration that drops `created_at`, `updated_at`, `deleted_at` from every `pokeapi.*` table.
+4. **Remove `...timestamps,` from every table declaration** in [database/schemas/pokeapi/](../../../database/schemas/pokeapi/) (18 files, ~135 tables). The migration is regenerated from scratch (see testing strategy below) — no need to hand-craft `ALTER TABLE` statements.
 
-5. **Verify [trainer.ts](../../../database/schemas/trainer.ts) and [app_user.ts](../../../database/schemas/app_user.ts) still use the helper** — those tables genuinely change over time and need it.
+5. **Leave [trainer.ts](../../../database/schemas/trainer.ts) and [app_user.ts](../../../database/schemas/app_user.ts) untouched** — those tables genuinely change over time and need the full `timestamps` helper.
 
-**Tradeoff:** queries that previously did `WHERE updated_at > $cursor` against pokeapi tables will no longer work, but no such queries exist today (pokeapi data is treated as static between seeds). Migration is a one-shot drop.
+**Migration testing strategy — clean-slate regeneration:**
+
+Because the cumulative schema refactor (this timestamps overhaul + historical-data tables + renames + FK index additions + relations() + wild encounters + sprites + everything else) touches ~135 tables in a way that produces a noisy, hard-to-review incremental migration diff, the cleaner approach is to wipe and regenerate:
+
+1. **Delete all existing migration files** in [drizzle-migrations/](../../../drizzle-migrations/) (or wherever the project keeps them).
+2. **Drop the dev and test databases entirely** (`npm run db:down`, `npm run test-db:down`, then back up — the dev DB is the only one with persistent storage; the test DB uses tmpfs so it resets on `down`).
+3. **Run `npm run db:generate`** — produces a single fresh "initial schema" migration reflecting the new desired state.
+4. **Run `npm run db:migrate`** (dev) + `npm run db:migrate:test` (test DBs) to create all tables.
+5. **Reseed in order:**
+   - `npm run pokeapi:seed` — populates pokeapi tables from the cache at [server-cache/pokeapi.co/api/v2/](../../../server-cache/pokeapi.co/api/v2/). This is the heavy one.
+   - `npm run db:seed` — populates fixture data ([database/seeds/fixtures.ts](../../../database/seeds/fixtures.ts)) which depends on pokeapi reference data existing (FKs from trainer-owned data into pokeapi).
+6. **Run `npm run test`** (full suite — unit + e2e). E2E is the primary gate: it exercises the full auth flow + DB end-to-end, so any schema/query mismatch surfaces.
+
+This avoids the migration-diff churn from incrementally walking through column drops, renames, and additions. Acceptable because:
+- No production data is in flight; everything is regenerable from the cache + seed.
+- Migration history is a tool for production schema evolution; during pre-prod heavy refactoring, a clean slate is easier to verify.
+
+**Tradeoff:** queries that previously did `WHERE updated_at > $cursor` against pokeapi tables will no longer work, but no such queries exist today (pokeapi data is treated as static between seeds).
 
 ### [medium] Add `relations()` to schema.ts
 
@@ -234,11 +297,9 @@ Currently only parent inserts are idempotent. For production-safe re-seed, child
 
 Defensive; not strictly needed.
 
-### [low] Widen URL columns
+### [low] Widen URL columns to `varchar(500)`
 
-Most `varchar(255)`. Some sprite paths approach the limit. Either:
-- Standardize all URL columns to `varchar(500)`, OR
-- Use `text` for URL columns (no width limit; tiny perf cost in PG).
+**Decision:** standardize all URL columns to `varchar(500)`. Most are currently `varchar(255)`; sprite-path URLs in particular approach the limit. Touch every `varchar({ length: 255 })` used on a URL-typed column. Excludes name/identifier columns which can stay at 255.
 
 ---
 
@@ -263,6 +324,15 @@ For each Section B addition, the corresponding seed work:
 8. **Move contest combos:** extend the move seeder.
 
 9. **Seed-run metadata:** wrap the entire seed entry-point in `meta.pokeapi_seed_runs` insert/update bracket (status: "running" → "success"/"failed"). Collect row counts as each table finishes seeding and serialize into `tableRowCounts` JSON blob.
+
+10. **Historical data — pokemon-side renames:** mechanical rename in [seed.ts](../../../database/seeds/pokeapi/seed.ts) for the three pokemon `past_*` insert sites — only the table identifiers change, no logic changes. Existing seed sections work as-is against the renamed tables.
+
+11. **Historical data — new tables:**
+    - `seedTypeEfficacyHistory()` reading `type.past_damage_relations[]` for each cached type file. Flatten 6 sub-arrays per generation snapshot the same way the current type-efficacy seeder flattens `damage_relations`. Resolve generation name → generationId via `generationNameMap`.
+    - `seedAbilityEffectHistory()` reading `ability.effect_changes[]`. Per `effect_changes` entry, insert one row per language in `effect_entries`. (Ability effect_changes typically has no `short_effect` so allow nullable.)
+    - `seedMoveValueHistory()` reading `move.past_values[]`. Insert one row per past_values entry into `moveValueHistoryTable`, then for each entry's `effect_entries[]`, insert into `moveValueHistoryEffectEntriesTable` keyed by the just-inserted parent row.
+    - `seedMoveEffectHistory()` reading `move.effect_changes[]`. Same shape as ability effect history.
+    - All five run AFTER `seedPokemon`, `seedMoves`, `seedAbilities`, `seedTypes`, `seedGenerations`, `seedVersionGroups`, `seedLanguages` — because they FK back to all of those.
 
 **General hygiene during these changes:**
 - Add `.onConflictDoNothing()` to every new insert path (Section C low-priority recommendation).
@@ -290,14 +360,33 @@ Findings explicitly NOT recommended for action:
 
 ## Suggested execution order
 
-If executing these recommendations, this order minimizes rework:
+Because the migration testing strategy uses **clean-slate regeneration** (wipe migration history, drop dev/test DBs, regenerate from current schema state, reseed, run e2e), all schema-touching changes naturally bundle into a single batch — there's no benefit to splitting them into multiple PRs since each one would invalidate the previous migration history.
 
-1. **Section C [high] schema fixes** — add missing FKs (evolvesFromSpeciesId, evolutionChainId), missing FK indexes, and unique index on `pokemonSpeciesEvolutionsTable`. One migration. Quick win.
-2. **Section C [high] timestamp overhaul** — create `meta.pokeapi_seed_runs`, drop per-row timestamps from all pokeapi tables, update [columnHelpers.ts](../../../database/utils/columnHelpers.ts), wrap seed with metadata bracket. One big mechanical migration touching all 135 pokeapi tables. Best done as its own PR for reviewability.
-3. **Section B [high]** — `wildEncountersTable` + seed. Closes the biggest data gap (~10 MB cached, zero consumption).
-4. **Section B [medium]** — form_descriptions, growth-rate levels, item sprites, type sprites. Each is a small isolated addition; can be one PR or four.
-5. **Section C [medium]** — add `relations()` for the heavy-join paths in [pokeapi.server.ts](../../../app/models/pokeapi.server.ts). Enables `db.query.*` style and unblocks the commented-out evolution query.
-6. **[deferred] Generation-aware historical data** — see Section B "Decide: capture *_history data?" + ongoing design discussion. Will likely become `[high]` once the trainer-generation feature ships.
-7. **Section C [low] + Section B [low]** — defer until prompted by a feature need.
+Two phases:
 
-Each numbered step is independent and can be its own PR.
+### Phase 1 — Single bundled schema overhaul PR
+
+All `[high]` and `[medium]` items at once, since they share one migration regeneration:
+
+1. **Schema fixes** — FK indexes, `.references()` additions (evolvesFromSpeciesId, evolutionChainId), unique index on `pokemonSpeciesEvolutionsTable`, add `relations()` declarations in [schema.ts](../../../database/schema.ts).
+2. **Timestamps overhaul** — create `meta` schema + `pokeapiSeedRunsTable`, remove `...timestamps,` from all pokeapi table declarations (leave trainer/app_user untouched), update [columnHelpers.ts](../../../database/utils/columnHelpers.ts).
+3. **New tables** — `wildEncountersTable` + `wildEncounterConditionValuesTable`, `typeSpritesTable`, `pokemonSpeciesFormDescriptionsTable`, `growthRateLevelsTable`. Add `itemsTable.spriteUrl` flat column.
+4. **Historical data renames** — `pokemonPastTypesTable` → `pokemonTypeHistoryTable`, `pokemonPastAbilitiesTable` → `pokemonAbilityHistoryTable`, `pokemonPastStatsTable` → `pokemonStatHistoryTable`.
+5. **Historical data new tables** — `typeEfficacyHistoryTable`, `abilityEffectHistoryTable`, `moveValueHistoryTable`, `moveValueHistoryEffectEntriesTable`, `moveEffectHistoryTable`.
+6. **URL column widening** — every `varchar(255)` on a URL column → `varchar(500)`.
+7. **Seed-script extensions** — all of §D items 1–11 (new tables + history renames + seed-run metadata bracket + helper utility `app/utils/generation-history.ts`).
+8. **Run the regeneration:** delete migration files, drop dev + test DBs, then in order:
+   - `npm run db:generate`
+   - `npm run db:migrate` (dev) + `npm run db:migrate:test` (test DBs)
+   - `npm run pokeapi:seed` — seeds the pokeapi tables from the cache (heavy)
+   - `npm run db:seed` — seeds fixture data, depends on pokeapi data being present
+   - `npm run test` — full unit + e2e suite
+
+### Phase 2 — Follow-up small PRs (independent, low-risk)
+
+These don't require schema changes and can ship anytime after Phase 1:
+
+9. **Section B [low]** — `moveContestCombosTable`, `regionsTable.mainGenerationId` (add as nullable column), `regionVersionGroupsTable`, `locationGameIndicesTable`. Each is a small isolated addition; bundle with whatever seed code is being touched.
+10. **Section C [low] nits** — make `pokemonFormsTable.formIdentifier` nullable, add `.onConflictDoNothing()` to all child-table seed inserts, CHECK constraints on small enums. Touch alongside related work.
+
+Phase 1 is the big bang; Phase 2 is cleanup. Both phases can be re-validated with the same clean-slate testing approach.
