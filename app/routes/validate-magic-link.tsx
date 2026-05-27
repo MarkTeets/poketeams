@@ -20,7 +20,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     return sendData(
       {
         success: false,
-        data: undefined,
+        data: null,
         errors: { message: validation.message },
       },
       {

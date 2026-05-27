@@ -15,7 +15,7 @@ export const trainersTable = trainerSchema.table("trainers", {
   ...timestamps,
 });
 
-export const pokemonTable = trainerSchema.table("pokemon", {
+export const pokemonInstanceTable = trainerSchema.table("pokemon_instance", {
   pokemonId: integer().primaryKey().generatedAlwaysAsIdentity(),
   pokeApiId: integer().notNull(),
   name: varchar({ length: 255 }).notNull(),
@@ -60,7 +60,7 @@ export const pokemonToPcBoxTable = trainerSchema.table("pokemon_to_pc_box", {
   pokemonToPcBoxId: integer().primaryKey().generatedAlwaysAsIdentity(),
   pokemonId: integer()
     .notNull()
-    .references(() => pokemonTable.pokemonId),
+    .references(() => pokemonInstanceTable.pokemonId),
   pcBoxId: integer()
     .notNull()
     .references(() => pcBoxesTable.pcBoxId),
@@ -81,7 +81,7 @@ export const pokemonToTeamTable = trainerSchema.table("pokemon_to_team", {
   pokemonToTeamId: integer().primaryKey().generatedAlwaysAsIdentity(),
   pokemonId: integer()
     .notNull()
-    .references(() => pokemonTable.pokemonId),
+    .references(() => pokemonInstanceTable.pokemonId),
   teamId: integer()
     .notNull()
     .references(() => teamsTable.teamId),
