@@ -188,6 +188,26 @@ export const evolutionChainsTable = pokeApiSchema.table("evolution_chains", {
   ...timestamps,
 });
 
+export const pokemonSpeciesVarietiesTable = pokeApiSchema.table(
+  "pokemon_species_varieties",
+  {
+    pokemonSpeciesVarietyId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    pokemonSpeciesId: integer()
+      .notNull()
+      .references(() => pokemonSpeciesTable.pokemonSpeciesId),
+    // Implicit FK to pokeapi.pokemon — no .references() to avoid circular import with pokemon.ts
+    pokemonId: integer().notNull(),
+    isDefault: boolean().notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("pokemon_species_varieties_ps_id_p_id_unique").on(
+      table.pokemonSpeciesId,
+      table.pokemonId,
+    ),
+  ],
+);
+
 // Each row is one node in the evolution tree — trigger + conditions for how
 // the species evolves FROM its parent (parent implied by pokemon_species.evolves_from_species_id)
 export const pokemonSpeciesEvolutionsTable = pokeApiSchema.table(

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import type { ModelResult } from "~/types";
@@ -13,7 +13,6 @@ import {
   evolutionChainsTable,
   generationsTable,
   growthRatesTable,
-  itemsTable,
   pokemonAbilitiesTable,
   pokemonColorsTable,
   pokemonFormsTable,
@@ -25,6 +24,7 @@ import {
   pokemonSpeciesGeneraTable,
   pokemonSpeciesNamesTable,
   pokemonSpeciesTable,
+  pokemonSpeciesVarietiesTable,
   pokemonStatsTable,
   pokemonTable,
   pokemonTypesTable,
@@ -208,48 +208,136 @@ export const getAllPokemonSpeciesDataById = async (id: number) => {
   }
 };
 
+export const getPokemonDetailsByName = async (name: string) => {
+  try {
+    const baseInfo = await db
+      .select({
+        pokemon: {
+          id: pokemonTable.pokemonId,
+          name: pokemonTable.name,
+          baseExperience: pokemonTable.baseExperience,
+          height: pokemonTable.height,
+          weight: pokemonTable.weight,
+          isDefault: pokemonTable.isDefault,
+          cryLatest: pokemonTable.cryLatest,
+          cryLegacy: pokemonTable.cryLegacy,
+        },
+        pokemonSpecies: {
+          id: pokemonSpeciesTable.pokemonSpeciesId,
+          name: pokemonSpeciesTable.name,
+          genderRate: pokemonSpeciesTable.genderRate,
+          captureRate: pokemonSpeciesTable.captureRate,
+          baseHappiness: pokemonSpeciesTable.baseHappiness,
+          isBaby: pokemonSpeciesTable.isBaby,
+          isLegendary: pokemonSpeciesTable.isLegendary,
+          isMythical: pokemonSpeciesTable.isMythical,
+          hatchCounter: pokemonSpeciesTable.hatchCounter,
+          hasGenderDifferences: pokemonSpeciesTable.hasGenderDifferences,
+          formsSwitchable: pokemonSpeciesTable.formsSwitchable,
+          generationId: pokemonSpeciesTable.generationId,
+          growthRateId: pokemonSpeciesTable.growthRateId,
+          pokemonColorId: pokemonSpeciesTable.pokemonColorId,
+          pokemonShapeId: pokemonSpeciesTable.pokemonShapeId,
+          pokemonHabitatId: pokemonSpeciesTable.pokemonHabitatId,
+          evolutionChainId: pokemonSpeciesTable.evolutionChainId,
+        },
+      })
+      .from(pokemonTable)
+      .fullJoin(
+        pokemonSpeciesTable,
+        eq(pokemonTable.pokemonSpeciesId, pokemonSpeciesTable.pokemonSpeciesId),
+      )
+      .where(eq(pokemonTable.name, name));
+
+    logger.debug({ baseInfo }, "getPokemonDetailsByName baseInfo");
+    if (!baseInfo[0]?.pokemon || !baseInfo[0]?.pokemonSpecies) {
+      return { ok: true, data: null };
+    }
+
+    const varieties = await db
+      .select({
+        pokemonId: pokemonSpeciesVarietiesTable.pokemonId,
+        pokemonName: pokemonTable.name,
+        isDefault: pokemonSpeciesVarietiesTable.isDefault,
+      })
+      .from(pokemonSpeciesVarietiesTable)
+      .leftJoin(
+        pokemonTable,
+        eq(pokemonSpeciesVarietiesTable.pokemonId, pokemonTable.pokemonId),
+      )
+      .orderBy(
+        desc(pokemonSpeciesVarietiesTable.isDefault),
+        pokemonTable.pokemonId,
+      )
+      .where(
+        eq(
+          pokemonSpeciesVarietiesTable.pokemonSpeciesId,
+          baseInfo[0].pokemonSpecies.id,
+        ),
+      );
+
+    logger.debug({ varieties }, "getPokemonDetailsByName varieties");
+
+    const result = {
+      pokemon: baseInfo[0].pokemon,
+      pokemonSpecies: baseInfo[0].pokemonSpecies,
+      varieties,
+    };
+
+    return { ok: true, data: result };
+  } catch (err) {
+    const { message, constraint } = getDbErrorMessage(err);
+    logger.error(
+      { err, message, constraint },
+      "Database call via pokeapi.getPokemonDetailsByName failure",
+    );
+    return { ok: false, message, constraint };
+  }
+};
+
+/*
 export const getEvolutionChain = async (pokemonSpeciesId: number) => {
   const evolvedSpecies = alias(pokemonSpeciesTable, "evolved_species");
   try {
     const result = await db
-      .select(
-        // {
-        //   pokemonSpeciesId: pokemonSpeciesTable.pokemonSpeciesId,
-        //   pokemonSpeciesName: pokemonSpeciesTable.name,
-        //   evolutionChainId: evolutionChainsTable.evolutionChainId,
-        //   babyTriggeredItem: evolutionChainsTable.babyTriggerItemId,
-        //   itemName: itemsTable.name,
-        //   pokemonSpeciesEvolutionId:
-        //   pokemonSpeciesEvolutionsTable.pokemonSpeciesEvolutionId,
-        //   evolvedSpeciesId: pokemonSpeciesEvolutionsTable.evolvedSpeciesId,
-        //   evolvedSpeciesName: evolvedSpecies.name,
-        //   triggerId: pokemonSpeciesEvolutionsTable.triggerId,
-        //   itemId: pokemonSpeciesEvolutionsTable.itemId,
-        //   heldItemId: pokemonSpeciesEvolutionsTable.heldItemId,
-        //   knownMoveId: pokemonSpeciesEvolutionsTable.knownMoveId,
-        //   knownMoveTypeId: pokemonSpeciesEvolutionsTable.knownMoveTypeId,
-        //   locationId: pokemonSpeciesEvolutionsTable.locationId,
-        //   partySpeciesId: pokemonSpeciesEvolutionsTable.partySpeciesId,
-        //   partyTypeId: pokemonSpeciesEvolutionsTable.partyTypeId,
-        //   tradeSpeciesId: pokemonSpeciesEvolutionsTable.tradeSpeciesId,
-        //   regionId: pokemonSpeciesEvolutionsTable.regionId,
-        //   genderId: pokemonSpeciesEvolutionsTable.genderId,
-        //   minLevel: pokemonSpeciesEvolutionsTable.minLevel,
-        //   minHappiness: pokemonSpeciesEvolutionsTable.minHappiness,
-        //   minBeauty: pokemonSpeciesEvolutionsTable.minBeauty,
-        //   minAffection: pokemonSpeciesEvolutionsTable.minAffection,
-        //   minDamageTaken: pokemonSpeciesEvolutionsTable.minDamageTaken,
-        //   minMoveCount: pokemonSpeciesEvolutionsTable.minMoveCount,
-        //   minSteps: pokemonSpeciesEvolutionsTable.minSteps,
-        //   relativePhysicalStats:
-        //     pokemonSpeciesEvolutionsTable.relativePhysicalStats,
-        //   needsOverworldRain: pokemonSpeciesEvolutionsTable.needsOverworldRain,
-        //   needsMultiplayer: pokemonSpeciesEvolutionsTable.needsMultiplayer,
-        //   turnUpsideDown: pokemonSpeciesEvolutionsTable.turnUpsideDown,
-        //   timeOfDay: pokemonSpeciesEvolutionsTable.timeOfDay,
-        //   baseForm: pokemonSpeciesEvolutionsTable.baseForm,
-        //  }
-      )
+      .select
+      // {
+      //   pokemonSpeciesId: pokemonSpeciesTable.pokemonSpeciesId,
+      //   pokemonSpeciesName: pokemonSpeciesTable.name,
+      //   evolutionChainId: evolutionChainsTable.evolutionChainId,
+      //   babyTriggeredItem: evolutionChainsTable.babyTriggerItemId,
+      //   itemName: itemsTable.name,
+      //   pokemonSpeciesEvolutionId:
+      //   pokemonSpeciesEvolutionsTable.pokemonSpeciesEvolutionId,
+      //   evolvedSpeciesId: pokemonSpeciesEvolutionsTable.evolvedSpeciesId,
+      //   evolvedSpeciesName: evolvedSpecies.name,
+      //   triggerId: pokemonSpeciesEvolutionsTable.triggerId,
+      //   itemId: pokemonSpeciesEvolutionsTable.itemId,
+      //   heldItemId: pokemonSpeciesEvolutionsTable.heldItemId,
+      //   knownMoveId: pokemonSpeciesEvolutionsTable.knownMoveId,
+      //   knownMoveTypeId: pokemonSpeciesEvolutionsTable.knownMoveTypeId,
+      //   locationId: pokemonSpeciesEvolutionsTable.locationId,
+      //   partySpeciesId: pokemonSpeciesEvolutionsTable.partySpeciesId,
+      //   partyTypeId: pokemonSpeciesEvolutionsTable.partyTypeId,
+      //   tradeSpeciesId: pokemonSpeciesEvolutionsTable.tradeSpeciesId,
+      //   regionId: pokemonSpeciesEvolutionsTable.regionId,
+      //   genderId: pokemonSpeciesEvolutionsTable.genderId,
+      //   minLevel: pokemonSpeciesEvolutionsTable.minLevel,
+      //   minHappiness: pokemonSpeciesEvolutionsTable.minHappiness,
+      //   minBeauty: pokemonSpeciesEvolutionsTable.minBeauty,
+      //   minAffection: pokemonSpeciesEvolutionsTable.minAffection,
+      //   minDamageTaken: pokemonSpeciesEvolutionsTable.minDamageTaken,
+      //   minMoveCount: pokemonSpeciesEvolutionsTable.minMoveCount,
+      //   minSteps: pokemonSpeciesEvolutionsTable.minSteps,
+      //   relativePhysicalStats:
+      //     pokemonSpeciesEvolutionsTable.relativePhysicalStats,
+      //   needsOverworldRain: pokemonSpeciesEvolutionsTable.needsOverworldRain,
+      //   needsMultiplayer: pokemonSpeciesEvolutionsTable.needsMultiplayer,
+      //   turnUpsideDown: pokemonSpeciesEvolutionsTable.turnUpsideDown,
+      //   timeOfDay: pokemonSpeciesEvolutionsTable.timeOfDay,
+      //   baseForm: pokemonSpeciesEvolutionsTable.baseForm,
+      //  }
+      ()
       .from(pokemonSpeciesTable)
       .leftJoin(
         evolutionChainsTable,
@@ -291,47 +379,50 @@ export const getEvolutionChain = async (pokemonSpeciesId: number) => {
 };
 
 export const getEvolutionChain2 = async (pokemonSpeciesId: number) => {
-  const evolvedSpecies = alias(pokemonSpeciesTable, "evolved_species");
+  // const evolveStartSpecies = alias(pokemonSpeciesTable, "evolve_start_species");
+  // const evolveEndSpecies = alias(pokemonSpeciesTable, "evolve_end_species");
+  const evolveStartPokemon = alias(pokemonTable, "evolve_start_pokemon");
+  const evolveEndPokemon = alias(pokemonTable, "evolve_end_pokemon");
   try {
     const result = await db
-      .select(
-        // {
-        //   pokemonSpeciesId: pokemonSpeciesTable.pokemonSpeciesId,
-        //   pokemonSpeciesName: pokemonSpeciesTable.name,
-        //   evolutionChainId: evolutionChainsTable.evolutionChainId,
-        //   babyTriggeredItem: evolutionChainsTable.babyTriggerItemId,
-        //   itemName: itemsTable.name,
-        //   pokemonSpeciesEvolutionId:
-        //   pokemonSpeciesEvolutionsTable.pokemonSpeciesEvolutionId,
-        //   evolvedSpeciesId: pokemonSpeciesEvolutionsTable.evolvedSpeciesId,
-        //   evolvedSpeciesName: evolvedSpecies.name,
-        //   triggerId: pokemonSpeciesEvolutionsTable.triggerId,
-        //   itemId: pokemonSpeciesEvolutionsTable.itemId,
-        //   heldItemId: pokemonSpeciesEvolutionsTable.heldItemId,
-        //   knownMoveId: pokemonSpeciesEvolutionsTable.knownMoveId,
-        //   knownMoveTypeId: pokemonSpeciesEvolutionsTable.knownMoveTypeId,
-        //   locationId: pokemonSpeciesEvolutionsTable.locationId,
-        //   partySpeciesId: pokemonSpeciesEvolutionsTable.partySpeciesId,
-        //   partyTypeId: pokemonSpeciesEvolutionsTable.partyTypeId,
-        //   tradeSpeciesId: pokemonSpeciesEvolutionsTable.tradeSpeciesId,
-        //   regionId: pokemonSpeciesEvolutionsTable.regionId,
-        //   genderId: pokemonSpeciesEvolutionsTable.genderId,
-        //   minLevel: pokemonSpeciesEvolutionsTable.minLevel,
-        //   minHappiness: pokemonSpeciesEvolutionsTable.minHappiness,
-        //   minBeauty: pokemonSpeciesEvolutionsTable.minBeauty,
-        //   minAffection: pokemonSpeciesEvolutionsTable.minAffection,
-        //   minDamageTaken: pokemonSpeciesEvolutionsTable.minDamageTaken,
-        //   minMoveCount: pokemonSpeciesEvolutionsTable.minMoveCount,
-        //   minSteps: pokemonSpeciesEvolutionsTable.minSteps,
-        //   relativePhysicalStats:
-        //     pokemonSpeciesEvolutionsTable.relativePhysicalStats,
-        //   needsOverworldRain: pokemonSpeciesEvolutionsTable.needsOverworldRain,
-        //   needsMultiplayer: pokemonSpeciesEvolutionsTable.needsMultiplayer,
-        //   turnUpsideDown: pokemonSpeciesEvolutionsTable.turnUpsideDown,
-        //   timeOfDay: pokemonSpeciesEvolutionsTable.timeOfDay,
-        //   baseForm: pokemonSpeciesEvolutionsTable.baseForm,
-        //  }
-      )
+      .select
+      // {
+      //   pokemonSpeciesId: pokemonSpeciesTable.pokemonSpeciesId,
+      //   pokemonSpeciesName: pokemonSpeciesTable.name,
+      //   evolutionChainId: evolutionChainsTable.evolutionChainId,
+      //   babyTriggeredItem: evolutionChainsTable.babyTriggerItemId,
+      //   itemName: itemsTable.name,
+      //   pokemonSpeciesEvolutionId:
+      //   pokemonSpeciesEvolutionsTable.pokemonSpeciesEvolutionId,
+      //   evolvedSpeciesId: pokemonSpeciesEvolutionsTable.evolvedSpeciesId,
+      //   evolvedSpeciesName: evolvedSpecies.name,
+      //   triggerId: pokemonSpeciesEvolutionsTable.triggerId,
+      //   itemId: pokemonSpeciesEvolutionsTable.itemId,
+      //   heldItemId: pokemonSpeciesEvolutionsTable.heldItemId,
+      //   knownMoveId: pokemonSpeciesEvolutionsTable.knownMoveId,
+      //   knownMoveTypeId: pokemonSpeciesEvolutionsTable.knownMoveTypeId,
+      //   locationId: pokemonSpeciesEvolutionsTable.locationId,
+      //   partySpeciesId: pokemonSpeciesEvolutionsTable.partySpeciesId,
+      //   partyTypeId: pokemonSpeciesEvolutionsTable.partyTypeId,
+      //   tradeSpeciesId: pokemonSpeciesEvolutionsTable.tradeSpeciesId,
+      //   regionId: pokemonSpeciesEvolutionsTable.regionId,
+      //   genderId: pokemonSpeciesEvolutionsTable.genderId,
+      //   minLevel: pokemonSpeciesEvolutionsTable.minLevel,
+      //   minHappiness: pokemonSpeciesEvolutionsTable.minHappiness,
+      //   minBeauty: pokemonSpeciesEvolutionsTable.minBeauty,
+      //   minAffection: pokemonSpeciesEvolutionsTable.minAffection,
+      //   minDamageTaken: pokemonSpeciesEvolutionsTable.minDamageTaken,
+      //   minMoveCount: pokemonSpeciesEvolutionsTable.minMoveCount,
+      //   minSteps: pokemonSpeciesEvolutionsTable.minSteps,
+      //   relativePhysicalStats:
+      //     pokemonSpeciesEvolutionsTable.relativePhysicalStats,
+      //   needsOverworldRain: pokemonSpeciesEvolutionsTable.needsOverworldRain,
+      //   needsMultiplayer: pokemonSpeciesEvolutionsTable.needsMultiplayer,
+      //   turnUpsideDown: pokemonSpeciesEvolutionsTable.turnUpsideDown,
+      //   timeOfDay: pokemonSpeciesEvolutionsTable.timeOfDay,
+      //   baseForm: pokemonSpeciesEvolutionsTable.baseForm,
+      //  }
+      ()
       .from(pokemonSpeciesTable)
       .leftJoin(
         evolutionChainsTable,
@@ -340,10 +431,10 @@ export const getEvolutionChain2 = async (pokemonSpeciesId: number) => {
           evolutionChainsTable.evolutionChainId,
         ),
       )
-      // .leftJoin(
-      //   itemsTable,
-      //   eq(evolutionChainsTable.babyTriggerItemId, itemsTable.itemId),
-      // )
+      .leftJoin(
+        itemsTable,
+        eq(evolutionChainsTable.babyTriggerItemId, itemsTable.itemId),
+      )
       .leftJoin(
         pokemonSpeciesEvolutionsTable,
         eq(
@@ -351,13 +442,27 @@ export const getEvolutionChain2 = async (pokemonSpeciesId: number) => {
           pokemonSpeciesEvolutionsTable.evolutionChainId,
         ),
       )
-      // .leftJoin(
-      //   evolvedSpecies,
-      //   eq(
-      //     pokemonSpeciesEvolutionsTable.evolvedSpeciesId,
-      //     evolvedSpecies.pokemonSpeciesId,
-      //   ),
-      // )
+      .leftJoin(
+        evolutionTriggersTable,
+        eq(
+          pokemonSpeciesEvolutionsTable.triggerId,
+          evolutionTriggersTable.evolutionTriggerId,
+        ),
+      )
+      .leftJoin(
+        evolveStartPokemon,
+        eq(
+          pokemonSpeciesEvolutionsTable.evolveStartPokemonId,
+          evolveStartPokemon.pokemonId,
+        ),
+    )
+      .leftJoin(
+        evolveEndPokemon,
+        eq(
+          pokemonSpeciesEvolutionsTable.evolveEndPokemonId,
+          evolveEndPokemon.pokemonId,
+        ),
+      )
       .where(eq(pokemonSpeciesTable.pokemonSpeciesId, pokemonSpeciesId));
     logger.debug({ result }, "getEvolutionChain");
     const evolutionChain = result;
@@ -371,10 +476,38 @@ export const getEvolutionChain2 = async (pokemonSpeciesId: number) => {
     return { ok: false, message, constraint };
   }
 };
-
-
-async function printThis() {
-  logger.debug({ final: await getEvolutionChain2(6) }, "final result")
+// pokemonSpeciesVarietiesTable
+const getVarietyBySpeciesId = async (pokemonSpeciesId: number) => {
+try {
+    const result = await db
+      .select()
+      .from(pokemonSpeciesVarietiesTable)
+      .where(eq(pokemonSpeciesVarietiesTable.pokemonSpeciesId, pokemonSpeciesId));
+    logger.debug({ result });
+    return { ok: true, data: result };
+  } catch (err) {
+    const { message, constraint } = getDbErrorMessage(err);
+    logger.error(
+      { err, message, constraint },
+      "Database call via pokeapi.getPokemonSpeciesById failure",
+    );
+    return { ok: false, message, constraint };
+  }
 }
 
-printThis()
+async function printThis() {
+  try {
+    logger.debug(
+      { final: await getPokemonDetailsByName("charmander") },
+      "final result",
+    );
+  } catch (err) {
+    logger.error({ err }, "DB failed");
+    process.exit(1);
+  } finally {
+    await db.$client.end();
+  }
+}
+
+printThis();
+*/

@@ -143,6 +143,7 @@ import {
   pokemonSpeciesNamesTable,
   pokemonSpeciesPalParkEncountersTable,
   pokemonSpeciesTable,
+  pokemonSpeciesVarietiesTable,
 } from "../../schemas/pokeapi/pokemon-species";
 import {
   growthRateDescriptionsTable,
@@ -2002,7 +2003,15 @@ function collectEvolutions(
     });
   }
   for (const child of node.evolves_to) {
-    rows.push(...collectEvolutions(chainId, child, pokemonNameMap, currentSpeciesId, currentSpeciesName));
+    rows.push(
+      ...collectEvolutions(
+        chainId,
+        child,
+        pokemonNameMap,
+        currentSpeciesId,
+        currentSpeciesName,
+      ),
+    );
   }
   return rows;
 }
@@ -2110,33 +2119,59 @@ async function seedPokedexes() {
   logger.info({ count: rows.length }, "pokedexes seeded");
 }
 
-type SpriteRow = { pokemonId: number; source: string; variant: string; url: string };
+type SpriteRow = {
+  pokemonId: number;
+  source: string;
+  variant: string;
+  url: string;
+};
 
-function flattenSprites(pokemonId: number, sprites: Record<string, unknown>): SpriteRow[] {
+function flattenSprites(
+  pokemonId: number,
+  sprites: Record<string, unknown>,
+): SpriteRow[] {
   const rows: SpriteRow[] = [];
 
   for (const [variant, val] of Object.entries(sprites)) {
     if (variant === "other" || variant === "versions") continue;
-    if (typeof val === "string") rows.push({ pokemonId, source: "default", variant, url: val });
+    if (typeof val === "string")
+      rows.push({ pokemonId, source: "default", variant, url: val });
   }
 
-  const other = sprites["other"] as Record<string, Record<string, string | null>> | undefined;
+  const other = sprites["other"] as
+    | Record<string, Record<string, string | null>>
+    | undefined;
   if (other) {
     for (const [source, variantMap] of Object.entries(other)) {
       for (const [variant, url] of Object.entries(variantMap)) {
-        if (typeof url === "string") rows.push({ pokemonId, source, variant, url });
+        if (typeof url === "string")
+          rows.push({ pokemonId, source, variant, url });
       }
     }
   }
 
-  const versions = sprites["versions"] as Record<string, Record<string, Record<string, unknown>>> | undefined;
+  const versions = sprites["versions"] as
+    | Record<string, Record<string, Record<string, unknown>>>
+    | undefined;
   if (versions) {
     for (const gameMap of Object.values(versions)) {
       for (const [game, variantMap] of Object.entries(gameMap)) {
         for (const [variant, val] of Object.entries(variantMap)) {
-          if (variant === "animated" && typeof val === "object" && val !== null) {
-            for (const [animVariant, url] of Object.entries(val as Record<string, string | null>)) {
-              if (typeof url === "string") rows.push({ pokemonId, source: `${game}-animated`, variant: animVariant, url });
+          if (
+            variant === "animated" &&
+            typeof val === "object" &&
+            val !== null
+          ) {
+            for (const [animVariant, url] of Object.entries(
+              val as Record<string, string | null>,
+            )) {
+              if (typeof url === "string")
+                rows.push({
+                  pokemonId,
+                  source: `${game}-animated`,
+                  variant: animVariant,
+                  url,
+                });
             }
           } else if (typeof val === "string") {
             rows.push({ pokemonId, source: game, variant, url: val });
@@ -2336,6 +2371,25 @@ async function seedPokemon() {
   logger.info({ count: files.length }, "pokemon seeded");
 }
 
+async function seedPokemonSpeciesVarieties() {
+  type Species = {
+    id: number;
+    varieties: { is_default: boolean; pokemon: { url: string } }[];
+  };
+  const rows = (await readAllFromCache("pokemon-species")) as Species[];
+  await insertChunked(
+    pokemonSpeciesVarietiesTable,
+    rows.flatMap((r) =>
+      r.varieties.map((v) => ({
+        pokemonSpeciesId: r.id,
+        pokemonId: idFromUrl(v.pokemon.url)!,
+        isDefault: v.is_default,
+      })),
+    ),
+  );
+  logger.info({ count: rows.length }, "pokemon-species varieties seeded");
+}
+
 async function backfillEvolutionChainIds() {
   type Species = {
     id: number;
@@ -2511,6 +2565,7 @@ export async function seed(): Promise<void> {
   // Wave 8
   await seedPokedexes();
   await seedPokemon();
+  await seedPokemonSpeciesVarieties();
   await backfillEvolutionChainIds();
   await backfillContestTypeBerryFlavors();
 
