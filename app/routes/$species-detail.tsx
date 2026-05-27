@@ -1,10 +1,11 @@
 import { useLoaderData } from "react-router";
 
-import type { Route } from "./+types/$species-detail";
 import { getAllPokemonSpeciesDataById } from "~/models/pokeapi.server";
 import { logger } from "~/utils/logger.server";
 import { sendResponseData, sendResponseError } from "~/utils/response-package";
 import { capitalize } from "~/utils/string-format";
+
+import type { Route } from "./+types/$species-detail";
 
 export async function loader({ params }: Route.LoaderArgs) {
   const pokeApiId = params.pokeApiId;
@@ -41,7 +42,9 @@ export default function SpeciesDetail() {
       <p>Baby: {speciesData.isBaby ? "Yes" : "No"}</p>
       <p>Legendary: {speciesData.isLegendary ? "Yes" : "No"}</p>
       <p>Mythical: {speciesData.isMythical ? "Yes" : "No"}</p>
-      <p>Gender Differences: {speciesData.hasGenderDifferences ? "Yes" : "No"}</p>
+      <p>
+        Gender Differences: {speciesData.hasGenderDifferences ? "Yes" : "No"}
+      </p>
       <p>Forms Switchable: {speciesData.formsSwitchable ? "Yes" : "No"}</p>
       {speciesData.generation && (
         <p>Generation: {capitalize(speciesData.generation.name)}</p>

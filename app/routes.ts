@@ -18,8 +18,10 @@ const testRoutes =
 export default [
   index("routes/home.tsx"),
   route("app", "routes/app.tsx"),
+  route("bulb", "routes/bulb.tsx"),
   route("species-finder", "routes/species-finder.tsx"),
   route("species/:pokeApiId", "routes/$species-detail.tsx"),
+  route("pokemon/:pokemonName", "routes/$pokemon-detail.tsx"),
   route("sprite/:url", "routes/sprite.tsx"),
   route("login", "routes/login.tsx"),
   route("logout", "routes/logout.tsx"),
