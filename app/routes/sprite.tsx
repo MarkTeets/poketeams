@@ -22,7 +22,10 @@ export async function loader({ params }: Route.LoaderArgs) {
 
     if (!response.ok) {
       logger.warn({ response }, `pokeapi failed to retrieve ${url}`);
-      return sendResponseError({ message: "PokeApi failed to send image" }, 500);
+      return sendResponseError(
+        { message: "PokeApi failed to send image" },
+        500,
+      );
     }
 
     const buffer = await response.arrayBuffer();

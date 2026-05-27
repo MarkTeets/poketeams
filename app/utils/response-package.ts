@@ -5,7 +5,7 @@ import type { FieldErrors } from "~/types";
 export type ActionResponsePackage<T> = {
   success: boolean;
   data: T;
-  errors: FieldErrors | undefined;
+  errors: FieldErrors | null;
 };
 
 export const sendData = <T>(
@@ -19,14 +19,14 @@ export const responseDataPackage = <T>(data: T) => {
   return {
     success: true,
     data: data,
-    errors: undefined,
+    errors: null,
   } as const;
 };
 
 export const responseErrorPackage = (errors: FieldErrors) => {
   return {
     success: false,
-    data: undefined,
+    data: null,
     errors,
   } as const;
 };

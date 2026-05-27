@@ -60,7 +60,7 @@ export async function action({ request }: Route.ActionArgs) {
       }
       // Otherwise, send successful status and commit the session
       return sendData(
-        { success: true, data: undefined, errors: undefined },
+        { success: true, data: null, errors: null },
         {
           headers: {
             "Set-Cookie": await commitAuthSession(session),

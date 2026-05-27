@@ -29,7 +29,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return sendData({
     success: true,
     data: { email: pendingEmail },
-    errors: undefined,
+    errors: null,
   });
 }
 
