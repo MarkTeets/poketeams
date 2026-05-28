@@ -1,11 +1,14 @@
+import { execSync } from "child_process";
 import { eq, sql } from "drizzle-orm";
 import { promises as fsPromises } from "fs";
 import * as path from "path";
 
 import { db } from "../../db";
+import { pokeapiSeedRunsTable } from "../../schemas/meta";
 import {
   abilitiesTable,
   abilityEffectEntriesTable,
+  abilityEffectHistoryTable,
   abilityFlavorTextsTable,
   abilityNamesTable,
 } from "../../schemas/pokeapi/abilities";
@@ -31,6 +34,8 @@ import {
   encounterConditionValuesTable,
   encounterMethodNamesTable,
   encounterMethodsTable,
+  wildEncounterConditionValuesTable,
+  wildEncountersTable,
 } from "../../schemas/pokeapi/encounters";
 import {
   evolutionTriggerNamesTable,
@@ -84,11 +89,14 @@ import {
 } from "../../schemas/pokeapi/move-basics";
 import {
   moveEffectEntriesTable,
+  moveEffectHistoryTable,
   moveFlavorTextsTable,
   moveMetaTable,
   moveNamesTable,
   movesTable,
   moveStatChangesTable,
+  moveValueHistoryEffectEntriesTable,
+  moveValueHistoryTable,
 } from "../../schemas/pokeapi/moves";
 import {
   natureBattleStylePreferencesTable,
@@ -105,15 +113,15 @@ import {
 } from "../../schemas/pokeapi/pokedex";
 import {
   pokemonAbilitiesTable,
+  pokemonAbilityHistoryTable,
   pokemonGameIndicesTable,
   pokemonHeldItemsTable,
   pokemonMovesTable,
-  pokemonPastAbilitiesTable,
-  pokemonPastStatsTable,
-  pokemonPastTypesTable,
   pokemonSpritesTable,
+  pokemonStatHistoryTable,
   pokemonStatsTable,
   pokemonTable,
+  pokemonTypeHistoryTable,
   pokemonTypesTable,
 } from "../../schemas/pokeapi/pokemon";
 import {
@@ -139,6 +147,7 @@ import {
   pokemonSpeciesEggGroupsTable,
   pokemonSpeciesEvolutionsTable,
   pokemonSpeciesFlavorTextsTable,
+  pokemonSpeciesFormDescriptionsTable,
   pokemonSpeciesGeneraTable,
   pokemonSpeciesNamesTable,
   pokemonSpeciesPalParkEncountersTable,
@@ -147,6 +156,7 @@ import {
 } from "../../schemas/pokeapi/pokemon-species";
 import {
   growthRateDescriptionsTable,
+  growthRateLevelsTable,
   growthRatesTable,
   locationAreaNamesTable,
   locationAreasTable,
@@ -166,10 +176,12 @@ import {
   statsTable,
 } from "../../schemas/pokeapi/stats";
 import {
+  typeEfficacyHistoryTable,
   typeEfficacyTable,
   typeGameIndicesTable,
   typeNamesTable,
   typesTable,
+  typeSpritesTable,
 } from "../../schemas/pokeapi/types";
 import { logger } from "../../utils/db-logger";
 import { cacheBase } from "./constants";
@@ -981,7 +993,13 @@ async function seedPalParkAreas() {
 }
 
 async function seedGrowthRates() {
-  type GR = { id: number; name: string; formula: string; descriptions: DR[] };
+  type GR = {
+    id: number;
+    name: string;
+    formula: string;
+    descriptions: DR[];
+    levels: { level: number; experience: number }[];
+  };
   const rows = (await readAllFromCache("growth-rate")) as GR[];
   await insertChunked(
     growthRatesTable,
@@ -999,6 +1017,16 @@ async function seedGrowthRates() {
         growthRateId: r.id,
         localLanguageId: idFromUrl(d.language.url)!,
         description: d.description,
+      })),
+    ),
+  );
+  await insertChunked(
+    growthRateLevelsTable,
+    rows.flatMap((r) =>
+      r.levels.map((l) => ({
+        growthRateId: r.id,
+        level: l.level,
+        experience: l.experience,
       })),
     ),
   );
@@ -1606,6 +1634,7 @@ async function seedItems() {
     fling_power: number | null;
     category: { url: string };
     fling_effect: { url: string } | null;
+    sprites: { default: string | null } | null;
     names: NR[];
     effect_entries: {
       effect: string;
@@ -1628,6 +1657,7 @@ async function seedItems() {
       name: r.name,
       cost: r.cost,
       flingPower: r.fling_power,
+      spriteUrl: r.sprites?.default ?? null,
       itemCategoryId: idFromUrl(r.category.url)!,
       itemFlingEffectId: idFromUrl(r.fling_effect?.url),
       url: `https://pokeapi.co/api/v2/item/${r.id}/`,
@@ -1818,6 +1848,7 @@ async function seedPokemonSpecies() {
       version: { url: string };
     }[];
     genera: { genus: string; language: { url: string } }[];
+    form_descriptions: { description: string; language: { url: string } }[];
     egg_groups: { url: string }[];
     pal_park_encounters: {
       base_score: number;
@@ -1880,6 +1911,16 @@ async function seedPokemonSpecies() {
         pokemonSpeciesId: r.id,
         localLanguageId: idFromUrl(g.language.url)!,
         genus: g.genus,
+      })),
+    ),
+  );
+  await insertChunked(
+    pokemonSpeciesFormDescriptionsTable,
+    rows.flatMap((r) =>
+      (r.form_descriptions ?? []).map((d) => ({
+        pokemonSpeciesId: r.id,
+        localLanguageId: idFromUrl(d.language.url)!,
+        description: d.description,
       })),
     ),
   );
@@ -2327,7 +2368,7 @@ async function seedPokemon() {
     );
     if (p.past_types) {
       await insertChunked(
-        pokemonPastTypesTable,
+        pokemonTypeHistoryTable,
         p.past_types.flatMap((pt) =>
           pt.types.map((t) => ({
             pokemonId: p.id,
@@ -2340,7 +2381,7 @@ async function seedPokemon() {
     }
     if (p.past_abilities) {
       await insertChunked(
-        pokemonPastAbilitiesTable,
+        pokemonAbilityHistoryTable,
         p.past_abilities.flatMap((pa) =>
           pa.abilities.map((a) => ({
             pokemonId: p.id,
@@ -2354,7 +2395,7 @@ async function seedPokemon() {
     }
     if (p.past_stats) {
       await insertChunked(
-        pokemonPastStatsTable,
+        pokemonStatHistoryTable,
         p.past_stats.flatMap((ps) =>
           ps.stats.map((s) => ({
             pokemonId: p.id,
@@ -2494,11 +2535,400 @@ async function seedPokemonForms() {
 }
 
 // ──────────────────────────────────────────────
+// Wave 10 — type sprites + history tables + wild encounters
+// ──────────────────────────────────────────────
+
+async function buildGenerationNameMap(): Promise<Map<string, number>> {
+  type Gen = { id: number; name: string };
+  const rows = (await readAllFromCache("generation")) as Gen[];
+  return new Map(rows.map((g) => [g.name, g.id]));
+}
+
+async function seedTypeSprites() {
+  type SpriteValue = { name_icon: string | null; symbol_icon: string | null };
+  type T = {
+    id: number;
+    sprites: Record<string, Record<string, SpriteValue>>;
+  };
+  const rows = (await readAllFromCache("type")) as T[];
+  const genMap = await buildGenerationNameMap();
+  const sprites: {
+    typeId: number;
+    generationId: number;
+    gameName: string;
+    variant: string;
+    url: string;
+  }[] = [];
+  for (const r of rows) {
+    if (!r.sprites) continue;
+    for (const [genName, games] of Object.entries(r.sprites)) {
+      const generationId = genMap.get(genName);
+      if (generationId === undefined) continue;
+      for (const [gameName, sv] of Object.entries(games)) {
+        if (typeof sv?.name_icon === "string") {
+          sprites.push({
+            typeId: r.id,
+            generationId,
+            gameName,
+            variant: "name_icon",
+            url: sv.name_icon,
+          });
+        }
+        if (typeof sv?.symbol_icon === "string") {
+          sprites.push({
+            typeId: r.id,
+            generationId,
+            gameName,
+            variant: "symbol_icon",
+            url: sv.symbol_icon,
+          });
+        }
+      }
+    }
+  }
+  await insertChunked(typeSpritesTable, sprites);
+  logger.info({ count: sprites.length }, "type-sprites seeded");
+}
+
+async function seedTypeEfficacyHistory() {
+  type DmgRelations = {
+    double_damage_to: { url: string }[];
+    half_damage_to: { url: string }[];
+    no_damage_to: { url: string }[];
+  };
+  type T = {
+    id: number;
+    past_damage_relations: {
+      generation: { url: string };
+      damage_relations: DmgRelations;
+    }[];
+  };
+  const rows = (await readAllFromCache("type")) as T[];
+  const history: {
+    generationId: number;
+    attackingTypeId: number;
+    defendingTypeId: number;
+    damageFactor: number;
+  }[] = [];
+  for (const r of rows) {
+    for (const pdr of r.past_damage_relations ?? []) {
+      const generationId = idFromUrl(pdr.generation.url)!;
+      for (const t of pdr.damage_relations.double_damage_to) {
+        history.push({
+          generationId,
+          attackingTypeId: r.id,
+          defendingTypeId: idFromUrl(t.url)!,
+          damageFactor: 200,
+        });
+      }
+      for (const t of pdr.damage_relations.half_damage_to) {
+        history.push({
+          generationId,
+          attackingTypeId: r.id,
+          defendingTypeId: idFromUrl(t.url)!,
+          damageFactor: 50,
+        });
+      }
+      for (const t of pdr.damage_relations.no_damage_to) {
+        history.push({
+          generationId,
+          attackingTypeId: r.id,
+          defendingTypeId: idFromUrl(t.url)!,
+          damageFactor: 0,
+        });
+      }
+    }
+  }
+  await insertChunked(typeEfficacyHistoryTable, history);
+  logger.info({ count: history.length }, "type-efficacy-history seeded");
+}
+
+async function seedAbilityEffectHistory() {
+  type Ability = {
+    id: number;
+    effect_changes: {
+      version_group: { url: string };
+      effect_entries: {
+        effect: string;
+        short_effect?: string | null;
+        language: { url: string };
+      }[];
+    }[];
+  };
+  const rows = (await readAllFromCache("ability")) as Ability[];
+  const history: {
+    abilityId: number;
+    versionGroupId: number;
+    localLanguageId: number;
+    effect: string;
+    shortEffect: string | null;
+  }[] = [];
+  for (const r of rows) {
+    for (const ec of r.effect_changes ?? []) {
+      const versionGroupId = idFromUrl(ec.version_group.url)!;
+      for (const e of ec.effect_entries) {
+        history.push({
+          abilityId: r.id,
+          versionGroupId,
+          localLanguageId: idFromUrl(e.language.url)!,
+          effect: e.effect,
+          shortEffect: e.short_effect ?? null,
+        });
+      }
+    }
+  }
+  await insertChunked(abilityEffectHistoryTable, history);
+  logger.info({ count: history.length }, "ability-effect-history seeded");
+}
+
+async function seedMoveValueHistory() {
+  type Move = {
+    id: number;
+    past_values: {
+      accuracy: number | null;
+      effect_chance: number | null;
+      power: number | null;
+      pp: number | null;
+      type: { url: string } | null;
+      version_group: { url: string };
+      effect_entries: {
+        effect: string;
+        short_effect?: string | null;
+        language: { url: string };
+      }[];
+    }[];
+  };
+  const rows = (await readAllFromCache("move")) as Move[];
+  // Two-pass insert: parent row first, then look up its surrogate id to insert children.
+  for (const r of rows) {
+    for (const pv of r.past_values ?? []) {
+      const versionGroupId = idFromUrl(pv.version_group.url)!;
+      const inserted = await db
+        .insert(moveValueHistoryTable)
+        .values({
+          moveId: r.id,
+          versionGroupId,
+          accuracy: pv.accuracy,
+          effectChance: pv.effect_chance,
+          power: pv.power,
+          pp: pv.pp,
+          typeId: idFromUrl(pv.type?.url),
+        })
+        .onConflictDoNothing()
+        .returning({ id: moveValueHistoryTable.moveValueHistoryId });
+      const parentId = inserted[0]?.id;
+      if (parentId === undefined) continue;
+      if (pv.effect_entries.length > 0) {
+        await insertChunked(
+          moveValueHistoryEffectEntriesTable,
+          pv.effect_entries.map((e) => ({
+            moveValueHistoryId: parentId,
+            localLanguageId: idFromUrl(e.language.url)!,
+            effect: e.effect,
+            shortEffect: e.short_effect ?? null,
+          })),
+        );
+      }
+    }
+  }
+  logger.info("move-value-history seeded");
+}
+
+async function seedMoveEffectHistory() {
+  type Move = {
+    id: number;
+    effect_changes: {
+      version_group: { url: string };
+      effect_entries: { effect: string; language: { url: string } }[];
+    }[];
+  };
+  const rows = (await readAllFromCache("move")) as Move[];
+  const history: {
+    moveId: number;
+    versionGroupId: number;
+    localLanguageId: number;
+    effect: string;
+  }[] = [];
+  for (const r of rows) {
+    for (const ec of r.effect_changes ?? []) {
+      const versionGroupId = idFromUrl(ec.version_group.url)!;
+      for (const e of ec.effect_entries) {
+        history.push({
+          moveId: r.id,
+          versionGroupId,
+          localLanguageId: idFromUrl(e.language.url)!,
+          effect: e.effect,
+        });
+      }
+    }
+  }
+  await insertChunked(moveEffectHistoryTable, history);
+  logger.info({ count: history.length }, "move-effect-history seeded");
+}
+
+async function seedWildEncounters() {
+  // Source: pokemon-location-area/<pokemonId>.json — much cleaner per-pokemon
+  // shape than the equivalent in location-area/*.json.
+  type EncounterDetail = {
+    chance: number;
+    min_level: number;
+    max_level: number;
+    method: { url: string };
+    condition_values: { url: string }[];
+  };
+  type VersionDetails = {
+    version: { url: string };
+    encounter_details: EncounterDetail[];
+  };
+  type Entry = {
+    location_area: { url: string };
+    version_details: VersionDetails[];
+  };
+
+  const dir = path.join(cacheBase, "pokemon-location-area");
+  let entries: string[];
+  try {
+    entries = await fsPromises.readdir(dir);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      logger.warn("pokemon-location-area cache missing — skipping");
+      return;
+    }
+    throw err;
+  }
+  let total = 0;
+  for (const file of entries.filter(
+    (f) => f.endsWith(".json") && !f.startsWith("__"),
+  )) {
+    const pokemonId = parseInt(file.replace(/\.json$/, ""));
+    if (isNaN(pokemonId)) continue;
+    const raw = await fsPromises.readFile(path.join(dir, file), "utf8");
+    const arr = JSON.parse(raw) as Entry[];
+    if (arr.length === 0) continue;
+    for (const e of arr) {
+      const locationAreaId = idFromUrl(e.location_area.url)!;
+      for (const vd of e.version_details) {
+        const versionId = idFromUrl(vd.version.url)!;
+        for (const ed of vd.encounter_details) {
+          const inserted = await db
+            .insert(wildEncountersTable)
+            .values({
+              pokemonId,
+              locationAreaId,
+              versionId,
+              encounterMethodId: idFromUrl(ed.method.url)!,
+              minLevel: ed.min_level,
+              maxLevel: ed.max_level,
+              chance: ed.chance,
+            })
+            .returning({ id: wildEncountersTable.wildEncounterId });
+          const wildEncounterId = inserted[0]?.id;
+          if (wildEncounterId === undefined) continue;
+          total++;
+          if (ed.condition_values.length > 0) {
+            await insertChunked(
+              wildEncounterConditionValuesTable,
+              ed.condition_values.map((cv) => ({
+                wildEncounterId,
+                encounterConditionValueId: idFromUrl(cv.url)!,
+              })),
+            );
+          }
+        }
+      }
+    }
+  }
+  logger.info({ count: total }, "wild-encounters seeded");
+}
+
+// ──────────────────────────────────────────────
+// Seed-run metadata (meta.pokeapi_seed_runs)
+// ──────────────────────────────────────────────
+
+async function startSeedRun(): Promise<number> {
+  let sourceCommit: string | null = null;
+  try {
+    sourceCommit = execSync("git rev-parse HEAD", { cwd: process.cwd() })
+      .toString()
+      .trim();
+  } catch {
+    /* ignore — not a git repo or git unavailable */
+  }
+  let pokeapiSnapshotDate: Date | null = null;
+  try {
+    const stat = await fsPromises.stat(cacheBase);
+    pokeapiSnapshotDate = stat.mtime;
+  } catch {
+    /* ignore */
+  }
+  const inserted = await db
+    .insert(pokeapiSeedRunsTable)
+    .values({
+      status: "running",
+      sourceCommit,
+      pokeapiSnapshotDate,
+    })
+    .returning({ id: pokeapiSeedRunsTable.pokeapiSeedRunId });
+  return inserted[0]!.id;
+}
+
+async function collectRowCounts(): Promise<Record<string, number>> {
+  const rows = await db.execute<{ table_name: string; count: string }>(sql`
+    SELECT
+      'pokeapi.' || c.table_name AS table_name,
+      (xpath('/row/c/text()', xml_count))[1]::text AS count
+    FROM (
+      SELECT table_name,
+        query_to_xml(format('select count(*) AS c from %I.%I', table_schema, table_name), false, true, '') AS xml_count
+      FROM information_schema.tables
+      WHERE table_schema = 'pokeapi' AND table_type = 'BASE TABLE'
+    ) c
+  `);
+  const result: Record<string, number> = {};
+  for (const r of rows.rows) result[r.table_name] = parseInt(r.count);
+  return result;
+}
+
+async function finishSeedRun(
+  runId: number,
+  status: "success" | "failed",
+): Promise<void> {
+  let rowCounts: string | null = null;
+  if (status === "success") {
+    try {
+      rowCounts = JSON.stringify(await collectRowCounts());
+    } catch (err) {
+      logger.warn({ err }, "Failed to collect row counts");
+    }
+  }
+  await db
+    .update(pokeapiSeedRunsTable)
+    .set({
+      status,
+      completedAt: new Date(),
+      tableRowCounts: rowCounts,
+    })
+    .where(eq(pokeapiSeedRunsTable.pokeapiSeedRunId, runId));
+}
+
+// ──────────────────────────────────────────────
 // Main
 // ──────────────────────────────────────────────
 
 export async function seed(): Promise<void> {
   logger.info("Starting PokeAPI seed");
+  const runId = await startSeedRun();
+  try {
+    await runSeed();
+    await finishSeedRun(runId, "success");
+    logger.info("PokeAPI seed complete");
+  } catch (err) {
+    await finishSeedRun(runId, "failed");
+    throw err;
+  }
+}
+
+async function runSeed(): Promise<void> {
   await clearPokeApi();
 
   // Wave 0
@@ -2572,7 +3002,13 @@ export async function seed(): Promise<void> {
   // Wave 9
   await seedPokemonForms();
 
-  logger.info("PokeAPI seed complete");
+  // Wave 10 — history tables + new JSON-data tables
+  await seedTypeSprites();
+  await seedTypeEfficacyHistory();
+  await seedAbilityEffectHistory();
+  await seedMoveValueHistory();
+  await seedMoveEffectHistory();
+  await seedWildEncounters();
 }
 
 if (process.argv[1]?.endsWith("seed.ts")) {
