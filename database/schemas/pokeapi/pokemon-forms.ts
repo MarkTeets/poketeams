@@ -20,7 +20,7 @@ export const pokemonFormsTable = pokeApiSchema.table(
     pokemonFormId: integer().primaryKey(),
     name: varchar({ length: 255 }).notNull().unique(),
     url: varchar({ length: 500 }).notNull(),
-    formName: varchar({ length: 255 }).notNull(),
+    formName: varchar({ length: 255 }),
     formOrder: integer().notNull(),
     order: integer().notNull(),
     isDefault: boolean().notNull(),

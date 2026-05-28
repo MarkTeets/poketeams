@@ -1,4 +1,5 @@
-import { integer, pgSchema, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { check, integer, pgSchema, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 import { generationsTable } from "./generations";
 import { languagesTable } from "./languages";
@@ -36,7 +37,9 @@ export const typeNamesTable = pokeApiSchema.table(
   ],
 );
 
-// damageFactor: 0 = no damage, 50 = half, 200 = double (percent)
+// damageFactor: 0 = no damage, 50 = half, 200 = double (percent).
+// Allowed values include 25 / 100 for theoretical "quarter" / "neutral" rows
+// even though we only ever insert non-neutral rows in the current seed.
 export const typeEfficacyTable = pokeApiSchema.table(
   "type_efficacy",
   {
@@ -53,6 +56,10 @@ export const typeEfficacyTable = pokeApiSchema.table(
     uniqueIndex("type_efficacy_attacking_defending_unique").on(
       table.attackingTypeId,
       table.defendingTypeId,
+    ),
+    check(
+      "type_efficacy_damage_factor_valid",
+      sql`${table.damageFactor} IN (0, 25, 50, 100, 200)`,
     ),
   ],
 );
@@ -125,6 +132,10 @@ export const typeEfficacyHistoryTable = pokeApiSchema.table(
       table.generationId,
       table.attackingTypeId,
       table.defendingTypeId,
+    ),
+    check(
+      "type_efficacy_history_damage_factor_valid",
+      sql`${table.damageFactor} IN (0, 25, 50, 100, 200)`,
     ),
   ],
 );

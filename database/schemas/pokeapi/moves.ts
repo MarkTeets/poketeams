@@ -237,3 +237,28 @@ export const moveEffectHistoryTable = pokeApiSchema.table(
     ),
   ],
 );
+
+// move.contest_combos.{normal,super}.{use_before,use_after}[]
+// kind ∈ {"normal","super"}, position ∈ {"before","after"}.
+export const moveContestCombosTable = pokeApiSchema.table(
+  "move_contest_combos",
+  {
+    moveContestComboId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    moveId: integer()
+      .notNull()
+      .references(() => movesTable.moveId),
+    pairedMoveId: integer()
+      .notNull()
+      .references(() => movesTable.moveId),
+    kind: varchar({ length: 10 }).notNull(),
+    position: varchar({ length: 10 }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("move_contest_combos_move_paired_kind_position_unique").on(
+      table.moveId,
+      table.pairedMoveId,
+      table.kind,
+      table.position,
+    ),
+  ],
+);

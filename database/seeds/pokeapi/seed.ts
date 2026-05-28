@@ -88,6 +88,7 @@ import {
   moveTargetsTable,
 } from "../../schemas/pokeapi/move-basics";
 import {
+  moveContestCombosTable,
   moveEffectEntriesTable,
   moveEffectHistoryTable,
   moveFlavorTextsTable,
@@ -160,12 +161,14 @@ import {
   growthRatesTable,
   locationAreaNamesTable,
   locationAreasTable,
+  locationGameIndicesTable,
   locationNamesTable,
   locationsTable,
   palParkAreaNamesTable,
   palParkAreasTable,
   regionNamesTable,
   regionsTable,
+  regionVersionGroupsTable,
 } from "../../schemas/pokeapi/regions";
 import {
   characteristicDescriptionsTable,
@@ -1407,6 +1410,7 @@ async function seedLocations() {
     name: string;
     region: { url: string } | null;
     names: NR[];
+    game_indices: { game_index: number; generation: { url: string } }[];
   };
   const rows = (await readAllFromCache("location")) as Loc[];
   await insertChunked(
@@ -1425,6 +1429,16 @@ async function seedLocations() {
         locationId: r.id,
         localLanguageId: langId(n),
         name: n.name,
+      })),
+    ),
+  );
+  await insertChunked(
+    locationGameIndicesTable,
+    rows.flatMap((r) =>
+      (r.game_indices ?? []).map((g) => ({
+        locationId: r.id,
+        generationId: idFromUrl(g.generation.url)!,
+        gameIndex: g.game_index,
       })),
     ),
   );
@@ -2786,6 +2800,78 @@ async function seedMoveEffectHistory() {
   logger.info({ count: history.length }, "move-effect-history seeded");
 }
 
+async function seedRegionMetadata() {
+  // Backfill regions.mainGenerationId (regions seed runs BEFORE generations,
+  // so we couldn't set it at insert time) AND insert the region <-> version_group M2M.
+  type Reg = {
+    id: number;
+    main_generation: { url: string } | null;
+    version_groups: { url: string }[];
+  };
+  const rows = (await readAllFromCache("region")) as Reg[];
+  for (const r of rows) {
+    if (r.main_generation) {
+      const generationId = idFromUrl(r.main_generation.url);
+      if (generationId !== null) {
+        await db
+          .update(regionsTable)
+          .set({ mainGenerationId: generationId })
+          .where(eq(regionsTable.regionId, r.id));
+      }
+    }
+  }
+  await insertChunked(
+    regionVersionGroupsTable,
+    rows.flatMap((r) =>
+      r.version_groups.map((vg) => ({
+        regionId: r.id,
+        versionGroupId: idFromUrl(vg.url)!,
+      })),
+    ),
+  );
+  logger.info("region metadata seeded");
+}
+
+async function seedMoveContestCombos() {
+  type ComboList = { url: string }[] | null;
+  type Move = {
+    id: number;
+    contest_combos: {
+      normal: { use_before: ComboList; use_after: ComboList };
+      super: { use_before: ComboList; use_after: ComboList };
+    } | null;
+  };
+  const rows = (await readAllFromCache("move")) as Move[];
+  const combos: {
+    moveId: number;
+    pairedMoveId: number;
+    kind: string;
+    position: string;
+  }[] = [];
+  for (const r of rows) {
+    if (!r.contest_combos) continue;
+    for (const kind of ["normal", "super"] as const) {
+      const bucket = r.contest_combos[kind];
+      if (!bucket) continue;
+      for (const position of ["before", "after"] as const) {
+        const list =
+          position === "before" ? bucket.use_before : bucket.use_after;
+        if (!list) continue;
+        for (const m of list) {
+          combos.push({
+            moveId: r.id,
+            pairedMoveId: idFromUrl(m.url)!,
+            kind,
+            position,
+          });
+        }
+      }
+    }
+  }
+  await insertChunked(moveContestCombosTable, combos);
+  logger.info({ count: combos.length }, "move-contest-combos seeded");
+}
+
 async function seedWildEncounters() {
   // Source: pokemon-location-area/<pokemonId>.json — much cleaner per-pokemon
   // shape than the equivalent in location-area/*.json.
@@ -3029,6 +3115,8 @@ async function runSeed(): Promise<void> {
   await seedAbilityEffectHistory();
   await seedMoveValueHistory();
   await seedMoveEffectHistory();
+  await seedRegionMetadata();
+  await seedMoveContestCombos();
   await seedWildEncounters();
 }
 

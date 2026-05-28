@@ -1,4 +1,5 @@
 import {
+  type AnyPgColumn,
   integer,
   pgSchema,
   text,
@@ -6,6 +7,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+import { generationsTable, versionGroupsTable } from "./generations";
 import { languagesTable } from "./languages";
 
 const pokeApiSchema = pgSchema("pokeapi");
@@ -14,7 +16,29 @@ export const regionsTable = pokeApiSchema.table("regions", {
   regionId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
   url: varchar({ length: 500 }).notNull(),
+  mainGenerationId: integer().references(
+    (): AnyPgColumn => generationsTable.generationId,
+  ),
 });
+
+export const regionVersionGroupsTable = pokeApiSchema.table(
+  "region_version_groups",
+  {
+    regionVersionGroupId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    regionId: integer()
+      .notNull()
+      .references(() => regionsTable.regionId),
+    versionGroupId: integer()
+      .notNull()
+      .references((): AnyPgColumn => versionGroupsTable.versionGroupId),
+  },
+  (table) => [
+    uniqueIndex("region_version_groups_region_id_vg_id_unique").on(
+      table.regionId,
+      table.versionGroupId,
+    ),
+  ],
+);
 
 export const regionNamesTable = pokeApiSchema.table(
   "region_names",
@@ -114,6 +138,26 @@ export const locationsTable = pokeApiSchema.table("locations", {
   url: varchar({ length: 500 }).notNull(),
   regionId: integer().references(() => regionsTable.regionId),
 });
+
+export const locationGameIndicesTable = pokeApiSchema.table(
+  "location_game_indices",
+  {
+    locationGameIndexId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    locationId: integer()
+      .notNull()
+      .references(() => locationsTable.locationId),
+    generationId: integer()
+      .notNull()
+      .references((): AnyPgColumn => generationsTable.generationId),
+    gameIndex: integer().notNull(),
+  },
+  (table) => [
+    uniqueIndex("location_game_indices_loc_id_gen_id_unique").on(
+      table.locationId,
+      table.generationId,
+    ),
+  ],
+);
 
 export const locationNamesTable = pokeApiSchema.table(
   "location_names",

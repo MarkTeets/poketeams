@@ -1,4 +1,10 @@
-import { integer, pgSchema, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import {
+  type AnyPgColumn,
+  integer,
+  pgSchema,
+  uniqueIndex,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 import { languagesTable } from "./languages";
 import { moveLearnMethodsTable } from "./move-basics";
@@ -39,7 +45,7 @@ export const generationsTable = pokeApiSchema.table("generations", {
   generationId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
   url: varchar({ length: 500 }).notNull(),
-  mainRegionId: integer().references(() => regionsTable.regionId),
+  mainRegionId: integer().references((): AnyPgColumn => regionsTable.regionId),
 });
 
 export const generationNamesTable = pokeApiSchema.table(

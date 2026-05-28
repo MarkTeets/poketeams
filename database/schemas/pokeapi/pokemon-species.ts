@@ -1,6 +1,8 @@
+import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   boolean,
+  check,
   index,
   integer,
   pgSchema,
@@ -78,6 +80,10 @@ export const pokemonSpeciesTable = pokeApiSchema.table(
       table.evolvesFromSpeciesId,
     ),
     index("pokemon_species_evolution_chain_id_idx").on(table.evolutionChainId),
+    check(
+      "pokemon_species_gender_rate_valid",
+      sql`${table.genderRate} BETWEEN -1 AND 8`,
+    ),
   ],
 );
 
