@@ -18,6 +18,7 @@ import {
   pokemonSpeciesTable,
   pokemonSpeciesVarietiesTable,
 } from "./pokeapi/pokemon-species";
+import { pokemonFormsTable } from "./pokeapi/pokemon-forms";
 import {
   pokemonAbilitiesTable,
   pokemonAbilityHistoryTable,
@@ -104,6 +105,7 @@ export const pokemonRelations = relations(pokemonTable, ({ one, many }) => ({
     fields: [pokemonTable.pokemonSpeciesId],
     references: [pokemonSpeciesTable.pokemonSpeciesId],
   }),
+  forms: many(pokemonFormsTable),
   abilities: many(pokemonAbilitiesTable),
   types: many(pokemonTypesTable),
   stats: many(pokemonStatsTable),
@@ -114,6 +116,13 @@ export const pokemonRelations = relations(pokemonTable, ({ one, many }) => ({
   typeHistory: many(pokemonTypeHistoryTable),
   abilityHistory: many(pokemonAbilityHistoryTable),
   statHistory: many(pokemonStatHistoryTable),
+}));
+
+export const pokemonFormsRelations = relations(pokemonFormsTable, ({ one }) => ({
+  pokemon: one(pokemonTable, {
+    fields: [pokemonFormsTable.pokemonId],
+    references: [pokemonTable.pokemonId],
+  }),
 }));
 
 export const pokemonAbilitiesRelations = relations(
