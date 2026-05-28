@@ -1,6 +1,5 @@
 import { integer, pgSchema, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { timestamps } from "../../utils/columnHelpers";
 import { berryFlavorsTable } from "./berries-and-contests";
 import { languagesTable } from "./languages";
 import { moveBattleStylesTable } from "./move-basics";
@@ -11,12 +10,11 @@ const pokeApiSchema = pgSchema("pokeapi");
 export const naturesTable = pokeApiSchema.table("natures", {
   natureId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   decreasedStatId: integer().references(() => statsTable.statId),
   increasedStatId: integer().references(() => statsTable.statId),
   hatesFlavorId: integer().references(() => berryFlavorsTable.berryFlavorId),
   likesFlavorId: integer().references(() => berryFlavorsTable.berryFlavorId),
-  ...timestamps,
 });
 
 export const natureNamesTable = pokeApiSchema.table(
@@ -30,7 +28,6 @@ export const natureNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("nature_names_nature_id_local_language_id_unique").on(
@@ -53,7 +50,6 @@ export const naturePokeathlonStatChangesTable = pokeApiSchema.table(
       .notNull()
       .references(() => pokeathlonStatsTable.pokeathlonStatId),
     maxChange: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("nature_pokeathlon_stat_changes_nat_id_ps_id_unique").on(
@@ -77,7 +73,6 @@ export const natureBattleStylePreferencesTable = pokeApiSchema.table(
       .references(() => moveBattleStylesTable.moveBattleStyleId),
     lowHpPreference: integer().notNull(),
     highHpPreference: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("nature_battle_style_prefs_nat_id_mbs_id_unique").on(

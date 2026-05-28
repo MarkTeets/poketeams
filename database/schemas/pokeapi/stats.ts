@@ -6,7 +6,6 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { timestamps } from "../../utils/columnHelpers";
 import { languagesTable } from "./languages";
 import { moveDamageClassesTable } from "./move-basics";
 
@@ -15,13 +14,12 @@ const pokeApiSchema = pgSchema("pokeapi");
 export const statsTable = pokeApiSchema.table("stats", {
   statId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   gameIndex: integer().notNull(),
   isBattleOnly: boolean().notNull(),
   moveDamageClassId: integer().references(
     () => moveDamageClassesTable.moveDamageClassId,
   ),
-  ...timestamps,
 });
 
 export const statNamesTable = pokeApiSchema.table(
@@ -35,7 +33,6 @@ export const statNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("stat_names_stat_id_local_language_id_unique").on(
@@ -48,8 +45,7 @@ export const statNamesTable = pokeApiSchema.table(
 export const pokeathlonStatsTable = pokeApiSchema.table("pokeathlon_stats", {
   pokeathlonStatId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const pokeathlonStatNamesTable = pokeApiSchema.table(
@@ -63,7 +59,6 @@ export const pokeathlonStatNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokeathlon_stat_names_ps_id_local_language_id_unique").on(
@@ -76,12 +71,11 @@ export const pokeathlonStatNamesTable = pokeApiSchema.table(
 // characteristic has no name — identified by highest_stat + gene_modulo
 export const characteristicsTable = pokeApiSchema.table("characteristics", {
   characteristicId: integer().primaryKey(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   geneModulo: integer().notNull(),
   highestStatId: integer()
     .notNull()
     .references(() => statsTable.statId),
-  ...timestamps,
 });
 
 export const characteristicDescriptionsTable = pokeApiSchema.table(
@@ -97,7 +91,6 @@ export const characteristicDescriptionsTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     description: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("characteristic_descriptions_char_id_lang_id_unique").on(

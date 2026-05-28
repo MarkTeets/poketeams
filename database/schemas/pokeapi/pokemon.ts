@@ -1,12 +1,12 @@
 import {
   boolean,
+  index,
   integer,
   pgSchema,
   uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { timestamps } from "../../utils/columnHelpers";
 import { abilitiesTable } from "./abilities";
 import {
   generationsTable,
@@ -22,22 +22,27 @@ import { typesTable } from "./types";
 
 const pokeApiSchema = pgSchema("pokeapi");
 
-export const pokemonTable = pokeApiSchema.table("pokemon", {
-  pokemonId: integer().primaryKey(),
-  name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  baseExperience: integer(),
-  height: integer().notNull(),
-  weight: integer().notNull(),
-  order: integer().notNull(),
-  isDefault: boolean().notNull(),
-  pokemonSpeciesId: integer()
-    .notNull()
-    .references(() => pokemonSpeciesTable.pokemonSpeciesId),
-  cryLatest: varchar({ length: 255 }),
-  cryLegacy: varchar({ length: 255 }),
-  ...timestamps,
-});
+export const pokemonTable = pokeApiSchema.table(
+  "pokemon",
+  {
+    pokemonId: integer().primaryKey(),
+    name: varchar({ length: 255 }).notNull().unique(),
+    url: varchar({ length: 500 }).notNull(),
+    baseExperience: integer(),
+    height: integer().notNull(),
+    weight: integer().notNull(),
+    order: integer().notNull(),
+    isDefault: boolean().notNull(),
+    pokemonSpeciesId: integer()
+      .notNull()
+      .references(() => pokemonSpeciesTable.pokemonSpeciesId),
+    cryLatest: varchar({ length: 500 }),
+    cryLegacy: varchar({ length: 500 }),
+  },
+  (table) => [
+    index("pokemon_pokemon_species_id_idx").on(table.pokemonSpeciesId),
+  ],
+);
 
 export const pokemonAbilitiesTable = pokeApiSchema.table(
   "pokemon_abilities",
@@ -51,7 +56,6 @@ export const pokemonAbilitiesTable = pokeApiSchema.table(
       .references(() => abilitiesTable.abilityId),
     isHidden: boolean().notNull(),
     slot: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_abilities_pokemon_id_slot_unique").on(
@@ -72,7 +76,6 @@ export const pokemonTypesTable = pokeApiSchema.table(
       .notNull()
       .references(() => typesTable.typeId),
     slot: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_types_pokemon_id_slot_unique").on(
@@ -94,7 +97,6 @@ export const pokemonStatsTable = pokeApiSchema.table(
       .references(() => statsTable.statId),
     baseStat: integer().notNull(),
     effort: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_stats_pokemon_id_stat_id_unique").on(
@@ -123,7 +125,6 @@ export const pokemonMovesTable = pokeApiSchema.table(
       .references(() => moveLearnMethodsTable.moveLearnMethodId),
     levelLearnedAt: integer().notNull(),
     order: integer(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_moves_pokemon_id_move_id_vg_id_mlm_id_unique").on(
@@ -146,7 +147,6 @@ export const pokemonGameIndicesTable = pokeApiSchema.table(
       .notNull()
       .references(() => versionsTable.versionId),
     gameIndex: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_game_indices_pokemon_id_version_id_unique").on(
@@ -170,7 +170,6 @@ export const pokemonHeldItemsTable = pokeApiSchema.table(
       .notNull()
       .references(() => versionsTable.versionId),
     rarity: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_held_items_pokemon_id_item_id_version_id_unique").on(
@@ -181,10 +180,11 @@ export const pokemonHeldItemsTable = pokeApiSchema.table(
   ],
 );
 
-export const pokemonPastTypesTable = pokeApiSchema.table(
-  "pokemon_past_types",
+// Per-generation type override (renamed from pokemon_past_types — naming-convention pass).
+export const pokemonTypeHistoryTable = pokeApiSchema.table(
+  "pokemon_type_history",
   {
-    pokemonPastTypeId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    pokemonTypeHistoryId: integer().primaryKey().generatedAlwaysAsIdentity(),
     pokemonId: integer()
       .notNull()
       .references(() => pokemonTable.pokemonId),
@@ -195,21 +195,21 @@ export const pokemonPastTypesTable = pokeApiSchema.table(
       .notNull()
       .references(() => typesTable.typeId),
     slot: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
-    uniqueIndex("pokemon_past_types_pokemon_id_generation_id_slot_unique").on(
-      table.pokemonId,
-      table.generationId,
-      table.slot,
-    ),
+    uniqueIndex(
+      "pokemon_type_history_pokemon_id_generation_id_slot_unique",
+    ).on(table.pokemonId, table.generationId, table.slot),
   ],
 );
 
-export const pokemonPastAbilitiesTable = pokeApiSchema.table(
-  "pokemon_past_abilities",
+// Per-generation ability override (renamed from pokemon_past_abilities).
+export const pokemonAbilityHistoryTable = pokeApiSchema.table(
+  "pokemon_ability_history",
   {
-    pokemonPastAbilityId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    pokemonAbilityHistoryId: integer()
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
     pokemonId: integer()
       .notNull()
       .references(() => pokemonTable.pokemonId),
@@ -219,11 +219,10 @@ export const pokemonPastAbilitiesTable = pokeApiSchema.table(
     abilityId: integer().references(() => abilitiesTable.abilityId),
     isHidden: boolean().notNull(),
     slot: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex(
-      "pokemon_past_abilities_pokemon_id_generation_id_slot_unique",
+      "pokemon_ability_history_pokemon_id_generation_id_slot_unique",
     ).on(table.pokemonId, table.generationId, table.slot),
   ],
 );
@@ -238,7 +237,6 @@ export const pokemonSpritesTable = pokeApiSchema.table(
     source: varchar({ length: 100 }).notNull(),
     variant: varchar({ length: 100 }).notNull(),
     url: varchar({ length: 500 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_sprites_pokemon_id_source_variant_unique").on(
@@ -249,10 +247,11 @@ export const pokemonSpritesTable = pokeApiSchema.table(
   ],
 );
 
-export const pokemonPastStatsTable = pokeApiSchema.table(
-  "pokemon_past_stats",
+// Per-generation stat override (renamed from pokemon_past_stats).
+export const pokemonStatHistoryTable = pokeApiSchema.table(
+  "pokemon_stat_history",
   {
-    pokemonPastStatId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    pokemonStatHistoryId: integer().primaryKey().generatedAlwaysAsIdentity(),
     pokemonId: integer()
       .notNull()
       .references(() => pokemonTable.pokemonId),
@@ -264,11 +263,10 @@ export const pokemonPastStatsTable = pokeApiSchema.table(
       .references(() => statsTable.statId),
     baseStat: integer().notNull(),
     effort: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex(
-      "pokemon_past_stats_pokemon_id_generation_id_stat_id_unique",
+      "pokemon_stat_history_pokemon_id_generation_id_stat_id_unique",
     ).on(table.pokemonId, table.generationId, table.statId),
   ],
 );

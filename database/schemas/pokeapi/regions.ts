@@ -1,4 +1,5 @@
 import {
+  type AnyPgColumn,
   integer,
   pgSchema,
   text,
@@ -6,7 +7,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { timestamps } from "../../utils/columnHelpers";
+import { generationsTable, versionGroupsTable } from "./generations";
 import { languagesTable } from "./languages";
 
 const pokeApiSchema = pgSchema("pokeapi");
@@ -14,9 +15,30 @@ const pokeApiSchema = pgSchema("pokeapi");
 export const regionsTable = pokeApiSchema.table("regions", {
   regionId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
+  mainGenerationId: integer().references(
+    (): AnyPgColumn => generationsTable.generationId,
+  ),
 });
+
+export const regionVersionGroupsTable = pokeApiSchema.table(
+  "region_version_groups",
+  {
+    regionVersionGroupId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    regionId: integer()
+      .notNull()
+      .references(() => regionsTable.regionId),
+    versionGroupId: integer()
+      .notNull()
+      .references((): AnyPgColumn => versionGroupsTable.versionGroupId),
+  },
+  (table) => [
+    uniqueIndex("region_version_groups_region_id_vg_id_unique").on(
+      table.regionId,
+      table.versionGroupId,
+    ),
+  ],
+);
 
 export const regionNamesTable = pokeApiSchema.table(
   "region_names",
@@ -29,7 +51,6 @@ export const regionNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("region_names_region_id_local_language_id_unique").on(
@@ -42,8 +63,7 @@ export const regionNamesTable = pokeApiSchema.table(
 export const palParkAreasTable = pokeApiSchema.table("pal_park_areas", {
   palParkAreaId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const palParkAreaNamesTable = pokeApiSchema.table(
@@ -57,7 +77,6 @@ export const palParkAreaNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pal_park_area_names_ppa_id_local_language_id_unique").on(
@@ -70,9 +89,8 @@ export const palParkAreaNamesTable = pokeApiSchema.table(
 export const growthRatesTable = pokeApiSchema.table("growth_rates", {
   growthRateId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   formula: text().notNull(),
-  ...timestamps,
 });
 
 export const growthRateDescriptionsTable = pokeApiSchema.table(
@@ -86,7 +104,6 @@ export const growthRateDescriptionsTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     description: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("growth_rate_descriptions_gr_id_local_language_id_unique").on(
@@ -96,13 +113,51 @@ export const growthRateDescriptionsTable = pokeApiSchema.table(
   ],
 );
 
+// Full 100-row EXP-per-level table per growth rate.
+export const growthRateLevelsTable = pokeApiSchema.table(
+  "growth_rate_levels",
+  {
+    growthRateLevelId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    growthRateId: integer()
+      .notNull()
+      .references(() => growthRatesTable.growthRateId),
+    level: integer().notNull(),
+    experience: integer().notNull(),
+  },
+  (table) => [
+    uniqueIndex("growth_rate_levels_gr_id_level_unique").on(
+      table.growthRateId,
+      table.level,
+    ),
+  ],
+);
+
 export const locationsTable = pokeApiSchema.table("locations", {
   locationId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   regionId: integer().references(() => regionsTable.regionId),
-  ...timestamps,
 });
+
+export const locationGameIndicesTable = pokeApiSchema.table(
+  "location_game_indices",
+  {
+    locationGameIndexId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    locationId: integer()
+      .notNull()
+      .references(() => locationsTable.locationId),
+    generationId: integer()
+      .notNull()
+      .references((): AnyPgColumn => generationsTable.generationId),
+    gameIndex: integer().notNull(),
+  },
+  (table) => [
+    uniqueIndex("location_game_indices_loc_id_gen_id_unique").on(
+      table.locationId,
+      table.generationId,
+    ),
+  ],
+);
 
 export const locationNamesTable = pokeApiSchema.table(
   "location_names",
@@ -115,7 +170,6 @@ export const locationNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("location_names_location_id_local_language_id_unique").on(
@@ -128,12 +182,11 @@ export const locationNamesTable = pokeApiSchema.table(
 export const locationAreasTable = pokeApiSchema.table("location_areas", {
   locationAreaId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   gameIndex: integer().notNull(),
   locationId: integer()
     .notNull()
     .references(() => locationsTable.locationId),
-  ...timestamps,
 });
 
 export const locationAreaNamesTable = pokeApiSchema.table(
@@ -147,7 +200,6 @@ export const locationAreaNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("location_area_names_la_id_local_language_id_unique").on(

@@ -1,6 +1,5 @@
 import { integer, pgSchema, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { timestamps } from "../../utils/columnHelpers";
 import { languagesTable } from "./languages";
 
 const pokeApiSchema = pgSchema("pokeapi");
@@ -8,8 +7,7 @@ const pokeApiSchema = pgSchema("pokeapi");
 export const moveAilmentsTable = pokeApiSchema.table("move_ailments", {
   moveAilmentId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const moveAilmentNamesTable = pokeApiSchema.table(
@@ -23,7 +21,6 @@ export const moveAilmentNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("move_ailment_names_ma_id_local_language_id_unique").on(
@@ -36,8 +33,7 @@ export const moveAilmentNamesTable = pokeApiSchema.table(
 export const moveCategoriesTable = pokeApiSchema.table("move_categories", {
   moveCategoryId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const moveCategoryDescriptionsTable = pokeApiSchema.table(
@@ -53,7 +49,6 @@ export const moveCategoryDescriptionsTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     description: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("move_category_descriptions_mc_id_local_language_id_unique").on(
@@ -66,8 +61,7 @@ export const moveCategoryDescriptionsTable = pokeApiSchema.table(
 export const moveBattleStylesTable = pokeApiSchema.table("move_battle_styles", {
   moveBattleStyleId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const moveBattleStyleNamesTable = pokeApiSchema.table(
@@ -81,7 +75,6 @@ export const moveBattleStyleNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("move_battle_style_names_mbs_id_local_language_id_unique").on(
@@ -96,8 +89,7 @@ export const moveDamageClassesTable = pokeApiSchema.table(
   {
     moveDamageClassId: integer().primaryKey(),
     name: varchar({ length: 255 }).notNull().unique(),
-    url: varchar({ length: 255 }).notNull(),
-    ...timestamps,
+    url: varchar({ length: 500 }).notNull(),
   },
 );
 
@@ -112,7 +104,6 @@ export const moveDamageClassNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("move_damage_class_names_mdc_id_local_language_id_unique").on(
@@ -135,7 +126,6 @@ export const moveDamageClassDescriptionsTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     description: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("move_damage_class_descs_mdc_id_local_language_id_unique").on(
@@ -148,8 +138,7 @@ export const moveDamageClassDescriptionsTable = pokeApiSchema.table(
 export const moveLearnMethodsTable = pokeApiSchema.table("move_learn_methods", {
   moveLearnMethodId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const moveLearnMethodNamesTable = pokeApiSchema.table(
@@ -163,7 +152,6 @@ export const moveLearnMethodNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("move_learn_method_names_mlm_id_local_language_id_unique").on(
@@ -186,7 +174,6 @@ export const moveLearnMethodDescriptionsTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     description: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("move_learn_method_descs_mlm_id_local_language_id_unique").on(
@@ -199,8 +186,7 @@ export const moveLearnMethodDescriptionsTable = pokeApiSchema.table(
 export const moveTargetsTable = pokeApiSchema.table("move_targets", {
   moveTargetId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const moveTargetNamesTable = pokeApiSchema.table(
@@ -214,7 +200,6 @@ export const moveTargetNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("move_target_names_mt_id_local_language_id_unique").on(
@@ -235,7 +220,6 @@ export const moveTargetDescriptionsTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     description: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("move_target_descs_mt_id_local_language_id_unique").on(

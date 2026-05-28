@@ -1,6 +1,5 @@
 import { integer, pgSchema, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { timestamps } from "../../utils/columnHelpers";
 import { languagesTable } from "./languages";
 
 const pokeApiSchema = pgSchema("pokeapi");
@@ -8,8 +7,7 @@ const pokeApiSchema = pgSchema("pokeapi");
 export const pokemonColorsTable = pokeApiSchema.table("pokemon_colors", {
   pokemonColorId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const pokemonColorNamesTable = pokeApiSchema.table(
@@ -23,7 +21,6 @@ export const pokemonColorNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_color_names_pc_id_local_language_id_unique").on(
@@ -36,8 +33,7 @@ export const pokemonColorNamesTable = pokeApiSchema.table(
 export const pokemonHabitatsTable = pokeApiSchema.table("pokemon_habitats", {
   pokemonHabitatId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const pokemonHabitatNamesTable = pokeApiSchema.table(
@@ -51,7 +47,6 @@ export const pokemonHabitatNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_habitat_names_ph_id_local_language_id_unique").on(
@@ -64,8 +59,7 @@ export const pokemonHabitatNamesTable = pokeApiSchema.table(
 export const pokemonShapesTable = pokeApiSchema.table("pokemon_shapes", {
   pokemonShapeId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const pokemonShapeNamesTable = pokeApiSchema.table(
@@ -79,7 +73,6 @@ export const pokemonShapeNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_shape_names_ps_id_local_language_id_unique").on(
@@ -102,7 +95,6 @@ export const pokemonShapeAwesomeNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     awesomeName: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex(
@@ -114,8 +106,7 @@ export const pokemonShapeAwesomeNamesTable = pokeApiSchema.table(
 export const eggGroupsTable = pokeApiSchema.table("egg_groups", {
   eggGroupId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const eggGroupNamesTable = pokeApiSchema.table(
@@ -129,7 +120,6 @@ export const eggGroupNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("egg_group_names_eg_id_local_language_id_unique").on(
@@ -142,6 +132,5 @@ export const eggGroupNamesTable = pokeApiSchema.table(
 export const gendersTable = pokeApiSchema.table("genders", {
   genderId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
