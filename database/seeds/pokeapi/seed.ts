@@ -2524,7 +2524,7 @@ async function seedPokemonForms() {
     rows.map((r) => ({
       pokemonFormId: r.id,
       name: r.name,
-      formName: r.form_name,
+      formName: r.form_name || null,
       formOrder: r.form_order,
       order: r.order,
       isDefault: r.is_default,
