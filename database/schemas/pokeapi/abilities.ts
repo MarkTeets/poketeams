@@ -7,7 +7,6 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { timestamps } from "../../utils/columnHelpers";
 import { generationsTable, versionGroupsTable } from "./generations";
 import { languagesTable } from "./languages";
 
@@ -16,10 +15,9 @@ const pokeApiSchema = pgSchema("pokeapi");
 export const abilitiesTable = pokeApiSchema.table("abilities", {
   abilityId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   isMainSeries: boolean().notNull(),
   generationId: integer().references(() => generationsTable.generationId),
-  ...timestamps,
 });
 
 export const abilityNamesTable = pokeApiSchema.table(
@@ -33,7 +31,6 @@ export const abilityNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("ability_names_ability_id_local_language_id_unique").on(
@@ -55,7 +52,6 @@ export const abilityEffectEntriesTable = pokeApiSchema.table(
       .references(() => languagesTable.languageId),
     effect: text().notNull(),
     shortEffect: text().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("ability_effect_entries_ab_id_lang_id_unique").on(
@@ -79,13 +75,40 @@ export const abilityFlavorTextsTable = pokeApiSchema.table(
       .notNull()
       .references(() => versionGroupsTable.versionGroupId),
     flavorText: text().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("ability_flavor_texts_ab_id_lang_id_vg_id_unique").on(
       table.abilityId,
       table.localLanguageId,
       table.versionGroupId,
+    ),
+  ],
+);
+
+// History table for ability.effect_changes[]: per-version-group overrides
+// to the effect/short_effect text. Ability effect_changes typically have no
+// short_effect — allow nullable.
+export const abilityEffectHistoryTable = pokeApiSchema.table(
+  "ability_effect_history",
+  {
+    abilityEffectHistoryId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    abilityId: integer()
+      .notNull()
+      .references(() => abilitiesTable.abilityId),
+    versionGroupId: integer()
+      .notNull()
+      .references(() => versionGroupsTable.versionGroupId),
+    localLanguageId: integer()
+      .notNull()
+      .references(() => languagesTable.languageId),
+    effect: text().notNull(),
+    shortEffect: text(),
+  },
+  (table) => [
+    uniqueIndex("ability_effect_history_ab_id_vg_id_lang_id_unique").on(
+      table.abilityId,
+      table.versionGroupId,
+      table.localLanguageId,
     ),
   ],
 );

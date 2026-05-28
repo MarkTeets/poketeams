@@ -6,7 +6,6 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { timestamps } from "../../utils/columnHelpers";
 import { generationsTable, versionGroupsTable } from "./generations";
 import { languagesTable } from "./languages";
 
@@ -15,8 +14,7 @@ const pokeApiSchema = pgSchema("pokeapi");
 export const itemFlingEffectsTable = pokeApiSchema.table("item_fling_effects", {
   itemFlingEffectId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const itemFlingEffectEffectEntriesTable = pokeApiSchema.table(
@@ -32,7 +30,6 @@ export const itemFlingEffectEffectEntriesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     effect: text().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("item_fling_effect_effects_ife_id_local_language_id_unique").on(
@@ -45,8 +42,7 @@ export const itemFlingEffectEffectEntriesTable = pokeApiSchema.table(
 export const itemPocketsTable = pokeApiSchema.table("item_pockets", {
   itemPocketId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const itemPocketNamesTable = pokeApiSchema.table(
@@ -60,7 +56,6 @@ export const itemPocketNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("item_pocket_names_ip_id_local_language_id_unique").on(
@@ -73,8 +68,7 @@ export const itemPocketNamesTable = pokeApiSchema.table(
 export const itemAttributesTable = pokeApiSchema.table("item_attributes", {
   itemAttributeId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const itemAttributeNamesTable = pokeApiSchema.table(
@@ -88,7 +82,6 @@ export const itemAttributeNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("item_attribute_names_ia_id_local_language_id_unique").on(
@@ -111,7 +104,6 @@ export const itemAttributeDescriptionsTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     description: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("item_attribute_descs_ia_id_local_language_id_unique").on(
@@ -124,11 +116,10 @@ export const itemAttributeDescriptionsTable = pokeApiSchema.table(
 export const itemCategoriesTable = pokeApiSchema.table("item_categories", {
   itemCategoryId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   itemPocketId: integer()
     .notNull()
     .references(() => itemPocketsTable.itemPocketId),
-  ...timestamps,
 });
 
 export const itemCategoryNamesTable = pokeApiSchema.table(
@@ -142,7 +133,6 @@ export const itemCategoryNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("item_category_names_ic_id_local_language_id_unique").on(
@@ -155,16 +145,16 @@ export const itemCategoryNamesTable = pokeApiSchema.table(
 export const itemsTable = pokeApiSchema.table("items", {
   itemId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   cost: integer().notNull(),
   flingPower: integer(),
+  spriteUrl: varchar({ length: 500 }),
   itemCategoryId: integer()
     .notNull()
     .references(() => itemCategoriesTable.itemCategoryId),
   itemFlingEffectId: integer().references(
     () => itemFlingEffectsTable.itemFlingEffectId,
   ),
-  ...timestamps,
 });
 
 export const itemNamesTable = pokeApiSchema.table(
@@ -178,7 +168,6 @@ export const itemNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("item_names_item_id_local_language_id_unique").on(
@@ -200,7 +189,6 @@ export const itemEffectEntriesTable = pokeApiSchema.table(
       .references(() => languagesTable.languageId),
     effect: text().notNull(),
     shortEffect: text().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("item_effect_entries_item_id_lang_id_unique").on(
@@ -225,7 +213,6 @@ export const itemFlavorTextsTable = pokeApiSchema.table(
       .notNull()
       .references(() => versionGroupsTable.versionGroupId),
     text: text().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("item_flavor_texts_item_id_lang_id_vg_id_unique").on(
@@ -246,7 +233,6 @@ export const itemItemAttributesTable = pokeApiSchema.table(
     itemAttributeId: integer()
       .notNull()
       .references(() => itemAttributesTable.itemAttributeId),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("item_item_attributes_item_id_attr_id_unique").on(
@@ -267,7 +253,6 @@ export const itemGameIndicesTable = pokeApiSchema.table(
       .notNull()
       .references(() => generationsTable.generationId),
     gameIndex: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("item_game_indices_item_id_generation_id_unique").on(

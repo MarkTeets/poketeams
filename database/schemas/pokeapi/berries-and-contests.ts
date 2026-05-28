@@ -6,7 +6,6 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { timestamps } from "../../utils/columnHelpers";
 import { itemsTable } from "./items";
 import { languagesTable } from "./languages";
 import { typesTable } from "./types";
@@ -16,8 +15,7 @@ const pokeApiSchema = pgSchema("pokeapi");
 export const berryFirmnessesTable = pokeApiSchema.table("berry_firmnesses", {
   berryFirmnessId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const berryFirmnessNamesTable = pokeApiSchema.table(
@@ -31,7 +29,6 @@ export const berryFirmnessNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("berry_firmness_names_bf_id_local_language_id_unique").on(
@@ -46,8 +43,7 @@ export const superContestEffectsTable = pokeApiSchema.table(
   {
     superContestEffectId: integer().primaryKey(),
     appeal: integer().notNull(),
-    url: varchar({ length: 255 }).notNull(),
-    ...timestamps,
+    url: varchar({ length: 500 }).notNull(),
   },
 );
 
@@ -64,7 +60,6 @@ export const superContestEffectFlavorTextsTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     flavorText: text().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("super_contest_effect_flavor_texts_sce_id_lang_id_unique").on(
@@ -78,8 +73,7 @@ export const contestEffectsTable = pokeApiSchema.table("contest_effects", {
   contestEffectId: integer().primaryKey(),
   appeal: integer().notNull(),
   jam: integer().notNull(),
-  url: varchar({ length: 255 }).notNull(),
-  ...timestamps,
+  url: varchar({ length: 500 }).notNull(),
 });
 
 export const contestEffectEffectEntriesTable = pokeApiSchema.table(
@@ -95,7 +89,6 @@ export const contestEffectEffectEntriesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     effect: text().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("contest_effect_effect_entries_ce_id_lang_id_unique").on(
@@ -118,7 +111,6 @@ export const contestEffectFlavorTextsTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     flavorText: text().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("contest_effect_flavor_texts_ce_id_lang_id_unique").on(
@@ -132,9 +124,8 @@ export const contestEffectFlavorTextsTable = pokeApiSchema.table(
 export const contestTypesTable = pokeApiSchema.table("contest_types", {
   contestTypeId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   berryFlavorId: integer(),
-  ...timestamps,
 });
 
 // names entries carry an extra `color` field (the type's associated color name)
@@ -150,7 +141,6 @@ export const contestTypeNamesTable = pokeApiSchema.table(
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
     color: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("contest_type_names_ct_id_local_language_id_unique").on(
@@ -163,11 +153,10 @@ export const contestTypeNamesTable = pokeApiSchema.table(
 export const berryFlavorsTable = pokeApiSchema.table("berry_flavors", {
   berryFlavorId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   contestTypeId: integer()
     .notNull()
     .references(() => contestTypesTable.contestTypeId),
-  ...timestamps,
 });
 
 export const berryFlavorNamesTable = pokeApiSchema.table(
@@ -181,7 +170,6 @@ export const berryFlavorNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("berry_flavor_names_bf_id_local_language_id_unique").on(
@@ -195,7 +183,7 @@ export const berryFlavorNamesTable = pokeApiSchema.table(
 export const berriesTable = pokeApiSchema.table("berries", {
   berryId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   growthTime: integer().notNull(),
   maxHarvest: integer().notNull(),
   naturalGiftPower: integer().notNull(),
@@ -207,7 +195,6 @@ export const berriesTable = pokeApiSchema.table("berries", {
     .references(() => berryFirmnessesTable.berryFirmnessId),
   itemId: integer().references(() => itemsTable.itemId),
   naturalGiftTypeId: integer().references(() => typesTable.typeId),
-  ...timestamps,
 });
 
 export const berryFlavorPotenciesTable = pokeApiSchema.table(
@@ -221,7 +208,6 @@ export const berryFlavorPotenciesTable = pokeApiSchema.table(
       .notNull()
       .references(() => berryFlavorsTable.berryFlavorId),
     potency: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("berry_flavor_potencies_berry_id_flavor_id_unique").on(

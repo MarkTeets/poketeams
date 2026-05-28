@@ -1,6 +1,5 @@
 import { integer, pgSchema, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { timestamps } from "../../utils/columnHelpers";
 import { languagesTable } from "./languages";
 import { moveLearnMethodsTable } from "./move-basics";
 import { regionsTable } from "./regions";
@@ -12,8 +11,7 @@ export const evolutionTriggersTable = pokeApiSchema.table(
   {
     evolutionTriggerId: integer().primaryKey(),
     name: varchar({ length: 255 }).notNull().unique(),
-    url: varchar({ length: 255 }).notNull(),
-    ...timestamps,
+    url: varchar({ length: 500 }).notNull(),
   },
 );
 
@@ -28,7 +26,6 @@ export const evolutionTriggerNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("evolution_trigger_names_et_id_local_language_id_unique").on(
@@ -41,9 +38,8 @@ export const evolutionTriggerNamesTable = pokeApiSchema.table(
 export const generationsTable = pokeApiSchema.table("generations", {
   generationId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   mainRegionId: integer().references(() => regionsTable.regionId),
-  ...timestamps,
 });
 
 export const generationNamesTable = pokeApiSchema.table(
@@ -57,7 +53,6 @@ export const generationNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("generation_names_gen_id_local_language_id_unique").on(
@@ -71,12 +66,11 @@ export const generationNamesTable = pokeApiSchema.table(
 export const versionGroupsTable = pokeApiSchema.table("version_groups", {
   versionGroupId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   order: integer().notNull(),
   generationId: integer()
     .notNull()
     .references(() => generationsTable.generationId),
-  ...timestamps,
 });
 
 export const versionGroupMoveLearnMethodsTable = pokeApiSchema.table(
@@ -91,7 +85,6 @@ export const versionGroupMoveLearnMethodsTable = pokeApiSchema.table(
     moveLearnMethodId: integer()
       .notNull()
       .references(() => moveLearnMethodsTable.moveLearnMethodId),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("vg_move_learn_methods_vg_id_mlm_id_unique").on(
@@ -111,7 +104,6 @@ export const versionGroupRegionsTable = pokeApiSchema.table(
     regionId: integer()
       .notNull()
       .references(() => regionsTable.regionId),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("version_group_regions_vg_id_region_id_unique").on(
@@ -124,11 +116,10 @@ export const versionGroupRegionsTable = pokeApiSchema.table(
 export const versionsTable = pokeApiSchema.table("versions", {
   versionId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   versionGroupId: integer()
     .notNull()
     .references(() => versionGroupsTable.versionGroupId),
-  ...timestamps,
 });
 
 export const versionNamesTable = pokeApiSchema.table(
@@ -142,7 +133,6 @@ export const versionNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("version_names_version_id_local_language_id_unique").on(

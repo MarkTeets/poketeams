@@ -6,7 +6,6 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { timestamps } from "../../utils/columnHelpers";
 import {
   contestEffectsTable,
   contestTypesTable,
@@ -28,7 +27,7 @@ const pokeApiSchema = pgSchema("pokeapi");
 export const movesTable = pokeApiSchema.table("moves", {
   moveId: integer().primaryKey(),
   name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   accuracy: integer(),
   effectChance: integer(),
   pp: integer(),
@@ -51,7 +50,6 @@ export const movesTable = pokeApiSchema.table("moves", {
   superContestEffectId: integer().references(
     () => superContestEffectsTable.superContestEffectId,
   ),
-  ...timestamps,
 });
 
 export const moveNamesTable = pokeApiSchema.table(
@@ -65,7 +63,6 @@ export const moveNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("move_names_move_id_local_language_id_unique").on(
@@ -87,7 +84,6 @@ export const moveEffectEntriesTable = pokeApiSchema.table(
       .references(() => languagesTable.languageId),
     effect: text().notNull(),
     shortEffect: text().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("move_effect_entries_move_id_lang_id_unique").on(
@@ -111,7 +107,6 @@ export const moveFlavorTextsTable = pokeApiSchema.table(
       .notNull()
       .references(() => versionGroupsTable.versionGroupId),
     flavorText: text().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("move_flavor_texts_move_id_lang_id_vg_id_unique").on(
@@ -145,7 +140,6 @@ export const moveMetaTable = pokeApiSchema.table("move_meta", {
   ailmentChance: integer().notNull(),
   flinchChance: integer().notNull(),
   statChance: integer().notNull(),
-  ...timestamps,
 });
 
 export const moveStatChangesTable = pokeApiSchema.table(
@@ -159,12 +153,87 @@ export const moveStatChangesTable = pokeApiSchema.table(
       .notNull()
       .references(() => statsTable.statId),
     change: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("move_stat_changes_move_id_stat_id_unique").on(
       table.moveId,
       table.statId,
+    ),
+  ],
+);
+
+// History table for move.past_values[]: per-version-group scalar overrides.
+// All scalar fields nullable — past_values entries selectively override only
+// the fields that actually changed in that version group.
+export const moveValueHistoryTable = pokeApiSchema.table(
+  "move_value_history",
+  {
+    moveValueHistoryId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    moveId: integer()
+      .notNull()
+      .references(() => movesTable.moveId),
+    versionGroupId: integer()
+      .notNull()
+      .references(() => versionGroupsTable.versionGroupId),
+    accuracy: integer(),
+    effectChance: integer(),
+    power: integer(),
+    pp: integer(),
+    typeId: integer().references(() => typesTable.typeId),
+  },
+  (table) => [
+    uniqueIndex("move_value_history_move_id_vg_id_unique").on(
+      table.moveId,
+      table.versionGroupId,
+    ),
+  ],
+);
+
+// effect_entries nested under each past_values entry.
+export const moveValueHistoryEffectEntriesTable = pokeApiSchema.table(
+  "move_value_history_effect_entries",
+  {
+    moveValueHistoryEffectEntryId: integer()
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    moveValueHistoryId: integer()
+      .notNull()
+      .references(() => moveValueHistoryTable.moveValueHistoryId),
+    localLanguageId: integer()
+      .notNull()
+      .references(() => languagesTable.languageId),
+    effect: text().notNull(),
+    shortEffect: text(),
+  },
+  (table) => [
+    uniqueIndex("move_value_history_effect_entries_mvh_id_lang_id_unique").on(
+      table.moveValueHistoryId,
+      table.localLanguageId,
+    ),
+  ],
+);
+
+// History table for move.effect_changes[]: per-version-group effect text overrides.
+export const moveEffectHistoryTable = pokeApiSchema.table(
+  "move_effect_history",
+  {
+    moveEffectHistoryId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    moveId: integer()
+      .notNull()
+      .references(() => movesTable.moveId),
+    versionGroupId: integer()
+      .notNull()
+      .references(() => versionGroupsTable.versionGroupId),
+    localLanguageId: integer()
+      .notNull()
+      .references(() => languagesTable.languageId),
+    effect: text().notNull(),
+  },
+  (table) => [
+    uniqueIndex("move_effect_history_move_id_vg_id_lang_id_unique").on(
+      table.moveId,
+      table.versionGroupId,
+      table.localLanguageId,
     ),
   ],
 );

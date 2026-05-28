@@ -1,5 +1,7 @@
 import {
+  type AnyPgColumn,
   boolean,
+  index,
   integer,
   pgSchema,
   text,
@@ -7,7 +9,6 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { timestamps } from "../../utils/columnHelpers";
 import {
   evolutionTriggersTable,
   generationsTable,
@@ -34,37 +35,51 @@ import { typesTable } from "./types";
 const pokeApiSchema = pgSchema("pokeapi");
 
 // evolutionChainId is nullable here — backfilled after evolution_chains exists
-export const pokemonSpeciesTable = pokeApiSchema.table("pokemon_species", {
-  pokemonSpeciesId: integer().primaryKey(),
-  name: varchar({ length: 255 }).notNull().unique(),
-  url: varchar({ length: 255 }).notNull(),
-  order: integer().notNull(),
-  genderRate: integer().notNull(),
-  captureRate: integer().notNull(),
-  baseHappiness: integer(),
-  isBaby: boolean().notNull(),
-  isLegendary: boolean().notNull(),
-  isMythical: boolean().notNull(),
-  hatchCounter: integer(),
-  hasGenderDifferences: boolean().notNull(),
-  formsSwitchable: boolean().notNull(),
-  generationId: integer()
-    .notNull()
-    .references(() => generationsTable.generationId),
-  growthRateId: integer()
-    .notNull()
-    .references(() => growthRatesTable.growthRateId),
-  pokemonColorId: integer()
-    .notNull()
-    .references(() => pokemonColorsTable.pokemonColorId),
-  pokemonShapeId: integer().references(() => pokemonShapesTable.pokemonShapeId),
-  pokemonHabitatId: integer().references(
-    () => pokemonHabitatsTable.pokemonHabitatId,
-  ),
-  evolvesFromSpeciesId: integer(),
-  evolutionChainId: integer(),
-  ...timestamps,
-});
+export const pokemonSpeciesTable = pokeApiSchema.table(
+  "pokemon_species",
+  {
+    pokemonSpeciesId: integer().primaryKey(),
+    name: varchar({ length: 255 }).notNull().unique(),
+    url: varchar({ length: 500 }).notNull(),
+    order: integer().notNull(),
+    genderRate: integer().notNull(),
+    captureRate: integer().notNull(),
+    baseHappiness: integer(),
+    isBaby: boolean().notNull(),
+    isLegendary: boolean().notNull(),
+    isMythical: boolean().notNull(),
+    hatchCounter: integer(),
+    hasGenderDifferences: boolean().notNull(),
+    formsSwitchable: boolean().notNull(),
+    generationId: integer()
+      .notNull()
+      .references(() => generationsTable.generationId),
+    growthRateId: integer()
+      .notNull()
+      .references(() => growthRatesTable.growthRateId),
+    pokemonColorId: integer()
+      .notNull()
+      .references(() => pokemonColorsTable.pokemonColorId),
+    pokemonShapeId: integer().references(
+      () => pokemonShapesTable.pokemonShapeId,
+    ),
+    pokemonHabitatId: integer().references(
+      () => pokemonHabitatsTable.pokemonHabitatId,
+    ),
+    evolvesFromSpeciesId: integer().references(
+      (): AnyPgColumn => pokemonSpeciesTable.pokemonSpeciesId,
+    ),
+    evolutionChainId: integer().references(
+      () => evolutionChainsTable.evolutionChainId,
+    ),
+  },
+  (table) => [
+    index("pokemon_species_evolves_from_species_id_idx").on(
+      table.evolvesFromSpeciesId,
+    ),
+    index("pokemon_species_evolution_chain_id_idx").on(table.evolutionChainId),
+  ],
+);
 
 export const pokemonSpeciesNamesTable = pokeApiSchema.table(
   "pokemon_species_names",
@@ -77,7 +92,6 @@ export const pokemonSpeciesNamesTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     name: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_species_names_ps_id_lang_id_unique").on(
@@ -104,7 +118,6 @@ export const pokemonSpeciesFlavorTextsTable = pokeApiSchema.table(
       .notNull()
       .references(() => versionsTable.versionId),
     flavorText: text().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_species_flavor_texts_ps_id_lang_id_v_id_unique").on(
@@ -126,10 +139,32 @@ export const pokemonSpeciesGeneraTable = pokeApiSchema.table(
       .notNull()
       .references(() => languagesTable.languageId),
     genus: varchar({ length: 255 }).notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_species_genera_ps_id_lang_id_unique").on(
+      table.pokemonSpeciesId,
+      table.localLanguageId,
+    ),
+  ],
+);
+
+// i18n descriptions of forms for multi-form species (e.g. deoxys).
+export const pokemonSpeciesFormDescriptionsTable = pokeApiSchema.table(
+  "pokemon_species_form_descriptions",
+  {
+    pokemonSpeciesFormDescriptionId: integer()
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    pokemonSpeciesId: integer()
+      .notNull()
+      .references(() => pokemonSpeciesTable.pokemonSpeciesId),
+    localLanguageId: integer()
+      .notNull()
+      .references(() => languagesTable.languageId),
+    description: text().notNull(),
+  },
+  (table) => [
+    uniqueIndex("pokemon_species_form_descriptions_ps_id_lang_id_unique").on(
       table.pokemonSpeciesId,
       table.localLanguageId,
     ),
@@ -148,7 +183,6 @@ export const pokemonSpeciesEggGroupsTable = pokeApiSchema.table(
     eggGroupId: integer()
       .notNull()
       .references(() => eggGroupsTable.eggGroupId),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_species_egg_groups_ps_id_eg_id_unique").on(
@@ -170,7 +204,6 @@ export const pokemonSpeciesPalParkEncountersTable = pokeApiSchema.table(
       .references(() => palParkAreasTable.palParkAreaId),
     baseScore: integer().notNull(),
     rate: integer().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pal_park_encounters_ps_id_area_id_unique").on(
@@ -183,9 +216,8 @@ export const pokemonSpeciesPalParkEncountersTable = pokeApiSchema.table(
 // pokemon_species.evolutionChainId is backfilled after this table exists
 export const evolutionChainsTable = pokeApiSchema.table("evolution_chains", {
   evolutionChainId: integer().primaryKey(),
-  url: varchar({ length: 255 }).notNull(),
+  url: varchar({ length: 500 }).notNull(),
   babyTriggerItemId: integer().references(() => itemsTable.itemId),
-  ...timestamps,
 });
 
 export const pokemonSpeciesVarietiesTable = pokeApiSchema.table(
@@ -198,7 +230,6 @@ export const pokemonSpeciesVarietiesTable = pokeApiSchema.table(
     // Implicit FK to pokeapi.pokemon — no .references() to avoid circular import with pokemon.ts
     pokemonId: integer().notNull(),
     isDefault: boolean().notNull(),
-    ...timestamps,
   },
   (table) => [
     uniqueIndex("pokemon_species_varieties_ps_id_p_id_unique").on(
@@ -260,6 +291,22 @@ export const pokemonSpeciesEvolutionsTable = pokeApiSchema.table(
     turnUpsideDown: boolean().notNull().default(false),
     timeOfDay: varchar({ length: 50 }),
     baseForm: varchar({ length: 255 }),
-    ...timestamps,
   },
+  (table) => [
+    index("pse_evolution_chain_id_idx").on(table.evolutionChainId),
+    index("pse_evolve_start_species_id_idx").on(table.evolveStartSpeciesId),
+    uniqueIndex("pse_chain_start_end_trigger_conditions_unique").on(
+      table.evolutionChainId,
+      table.evolveStartSpeciesId,
+      table.evolveEndSpeciesId,
+      table.triggerId,
+      table.itemId,
+      table.heldItemId,
+      table.knownMoveId,
+      table.usedMoveId,
+      table.minLevel,
+      table.timeOfDay,
+      table.baseForm,
+    ),
+  ],
 );
