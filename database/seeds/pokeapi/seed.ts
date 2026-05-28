@@ -1857,7 +1857,9 @@ async function seedPokemonSpecies() {
     }[];
   };
   const rows = (await readAllFromCache("pokemon-species")) as Species[];
-  // Seed without evolutionChainId — backfilled after evolution_chains
+  // Seed without evolutionChainId or evolvesFromSpeciesId — both backfilled
+  // afterwards. evolvesFromSpeciesId is a self-FK; bulk insert order does not
+  // guarantee the parent species exists before its children, so set null first.
   await insertChunked(
     pokemonSpeciesTable,
     rows.map((r) => ({
@@ -1878,7 +1880,7 @@ async function seedPokemonSpecies() {
       pokemonColorId: idFromUrl(r.color.url)!,
       pokemonShapeId: idFromUrl(r.shape?.url),
       pokemonHabitatId: idFromUrl(r.habitat?.url),
-      evolvesFromSpeciesId: idFromUrl(r.evolves_from_species?.url),
+      evolvesFromSpeciesId: null,
       evolutionChainId: null,
       url: `https://pokeapi.co/api/v2/pokemon-species/${r.id}/`,
     })),
@@ -2449,6 +2451,24 @@ async function backfillEvolutionChainIds() {
   logger.info("pokemon_species.evolutionChainId backfilled");
 }
 
+async function backfillEvolvesFromSpeciesIds() {
+  type Species = {
+    id: number;
+    evolves_from_species: { url: string } | null;
+  };
+  const rows = (await readAllFromCache("pokemon-species")) as Species[];
+  for (const s of rows) {
+    if (!s.evolves_from_species) continue;
+    const parentId = idFromUrl(s.evolves_from_species.url);
+    if (parentId === null) continue;
+    await db
+      .update(pokemonSpeciesTable)
+      .set({ evolvesFromSpeciesId: parentId })
+      .where(eq(pokemonSpeciesTable.pokemonSpeciesId, s.id));
+  }
+  logger.info("pokemon_species.evolvesFromSpeciesId backfilled");
+}
+
 async function backfillContestTypeBerryFlavors() {
   type CT = { id: number; berry_flavor: { url: string } | null };
   const rows = (await readAllFromCache("contest-type")) as CT[];
@@ -2997,6 +3017,7 @@ async function runSeed(): Promise<void> {
   await seedPokemon();
   await seedPokemonSpeciesVarieties();
   await backfillEvolutionChainIds();
+  await backfillEvolvesFromSpeciesIds();
   await backfillContestTypeBerryFlavors();
 
   // Wave 9
